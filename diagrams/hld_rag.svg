@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1360" height="2124" viewBox="0 0 680 1062">
+<defs>
+<marker id="a2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#5F5E5A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+</defs>
+<rect width="680" height="1062" fill="#FFFFFF"/>
+
+<g><rect x="250" y="20" width="280" height="52" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+<text x="390" y="38" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#26215C">1. LangChain framework</text>
+<text x="390" y="55" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#3C3489">Orchestrates the RAG chain</text></g>
+<line x1="390" y1="72" x2="390" y2="90" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a2)"/>
+
+<g><rect x="250" y="90" width="280" height="56" rx="8" fill="#FAECE7" stroke="#993C1D" stroke-width="0.5"/>
+<text x="390" y="108" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#4A1B0C">2. Input validation</text>
+<text x="390" y="126" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#712B13">Input validation library</text></g>
+<line x1="250" y1="118" x2="200" y2="118" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a2)"/>
+<g><rect x="40" y="90" width="160" height="56" rx="8" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.5"/>
+<text x="120" y="108" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#2C2C2A">2b. Failed</text>
+<text x="120" y="126" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#5F5E5A">Request blocked</text></g>
+
+<line x1="390" y1="146" x2="390" y2="164" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a2)"/>
+<text x="398" y="158" font-family="sans-serif" font-size="12" fill="#5F5E5A">2a. validated</text>
+
+<g><rect x="250" y="164" width="280" height="48" rx="8" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.5"/>
+<text x="390" y="182" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#2C2C2A">3. Take a PDF</text>
+<text x="390" y="200" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#5F5E5A">Source document</text></g>
+<line x1="390" y1="212" x2="390" y2="230" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a2)"/>
+
+<g><rect x="250" y="230" width="280" height="48" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+<text x="390" y="248" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#042C53">4. Chunk the PDF</text>
+<text x="390" y="266" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#0C447C">Overlapping text windows</text></g>
+<line x1="390" y1="278" x2="390" y2="296" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a2)"/>
+
+<g><rect x="250" y="296" width="280" height="48" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+<text x="390" y="314" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#042C53">5. Create embeddings</text>
+<text x="390" y="332" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#0C447C">Text to small vectors</text></g>
+<line x1="390" y1="344" x2="390" y2="362" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a2)"/>
+
+<g><rect x="250" y="362" width="280" height="48" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+<text x="390" y="380" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#042C53">6. Store embeddings</text>
+<text x="390" y="398" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#0C447C">Vector store</text></g>
+<line x1="390" y1="410" x2="390" y2="428" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a2)"/>
+
+<g><rect x="250" y="428" width="280" height="52" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+<text x="390" y="446" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#042C53">7. Search results</text>
+<text x="390" y="464" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#0C447C">Top-k, cosine similarity</text></g>
+<line x1="390" y1="480" x2="390" y2="498" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a2)"/>
+
+<g><rect x="250" y="498" width="280" height="48" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+<text x="390" y="516" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#042C53">8. Rerank</text>
+<text x="390" y="534" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#0C447C">Reorder by true relevance</text></g>
+<line x1="390" y1="546" x2="390" y2="564" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a2)"/>
+
+<g><rect x="250" y="564" width="280" height="48" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+<text x="390" y="582" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#04342C">9. Create prompt chain</text>
+<text x="390" y="600" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#085041">Context plus query</text></g>
+<line x1="390" y1="612" x2="390" y2="630" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a2)"/>
+
+<g><rect x="250" y="630" width="280" height="56" rx="8" fill="#FBEAF0" stroke="#993556" stroke-width="0.5"/>
+<text x="390" y="648" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#4B1528">10. Ask for the response</text>
+<text x="390" y="666" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#993556">LLM call</text></g>
+<line x1="390" y1="686" x2="390" y2="704" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a2)"/>
+
+<g><rect x="250" y="704" width="280" height="56" rx="8" fill="#FAEEDA" stroke="#854F0B" stroke-width="0.5"/>
+<text x="390" y="722" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#412402">11. Evaluation</text>
+<text x="390" y="740" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#633806">DeepEval scores the result</text></g>
+<path d="M250 732 L200 732 L200 658 L250 658" fill="none" stroke="#5F5E5A" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#a2)"/>
+<text x="80" y="700" font-family="sans-serif" font-size="12" fill="#5F5E5A">11b. Not OK:</text>
+<text x="80" y="716" font-family="sans-serif" font-size="12" fill="#5F5E5A">retry (capped)</text>
+
+<line x1="390" y1="760" x2="390" y2="778" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a2)"/>
+<text x="398" y="772" font-family="sans-serif" font-size="12" fill="#5F5E5A">11a. OK</text>
+
+<g><rect x="250" y="778" width="280" height="52" rx="8" fill="#FAECE7" stroke="#993C1D" stroke-width="0.5"/>
+<text x="390" y="796" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#4A1B0C">12. Security guardrail</text>
+<text x="390" y="814" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#712B13">NeMo Guardrails / Llama Guard</text></g>
+<line x1="390" y1="830" x2="390" y2="848" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a2)"/>
+
+<g><rect x="250" y="848" width="280" height="60" rx="8" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.5"/>
+<text x="390" y="866" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#2C2C2A">13. Observability</text>
+<text x="390" y="884" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#5F5E5A">Langfuse</text></g>
+<line x1="390" y1="908" x2="390" y2="926" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a2)"/>
+
+<g><rect x="290" y="926" width="200" height="44" rx="8" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.5"/>
+<text x="390" y="944" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#2C2C2A">Tokens</text>
+<text x="390" y="960" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#5F5E5A">&amp; cost</text></g>
+<line x1="390" y1="970" x2="390" y2="988" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a2)"/>
+
+<g><rect x="250" y="988" width="280" height="44" rx="8" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.5"/>
+<text x="390" y="1004" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#2C2C2A">Response</text>
+<text x="390" y="1020" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#5F5E5A">Returned to caller</text></g>
+</svg>

@@ -1,0 +1,16 @@
+langchain
+langchain-openai
+langchain-community
+langgraph
+# llm-guard 0.3.10 pins sentencepiece 0.2.0, which has no Python 3.13 wheel.
+llm-guard; python_version < "3.13"
+nemoguardrails
+deepeval
+langfuse
+openai
+qdrant-client
+pypdf
+numpy
+reportlab
+python-dotenv
+streamlit

@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="227" viewBox="0 0 1200 170">
+<defs>
+<marker id="ho1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#5F5E5A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+</defs>
+<rect width="1200" height="170" fill="#FFFFFF"/>
+
+<g><rect x="52" y="40" width="148" height="64" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+<text x="126" y="60" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#26215C">Router</text>
+<text x="126" y="80" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#3C3489">LangChain / LangGraph</text></g>
+<line x1="200" y1="72" x2="210" y2="72" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#ho1)"/>
+
+<g><rect x="210" y="40" width="148" height="64" rx="8" fill="#FAECE7" stroke="#993C1D" stroke-width="0.5"/>
+<text x="284" y="60" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#4A1B0C">Validation</text>
+<text x="284" y="80" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#712B13">Input validation lib</text></g>
+<line x1="358" y1="72" x2="368" y2="72" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#ho1)"/>
+<text x="284" y="122" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#5F5E5A">fail -&gt; blocked</text>
+
+<g><rect x="368" y="40" width="148" height="64" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+<text x="442" y="60" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#04342C">Prompt library</text>
+<text x="442" y="80" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#085041">Fetches the prompt</text></g>
+<line x1="516" y1="72" x2="526" y2="72" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#ho1)"/>
+
+<g><rect x="526" y="40" width="148" height="64" rx="8" fill="#FBEAF0" stroke="#993556" stroke-width="0.5"/>
+<text x="600" y="60" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#4B1528">LLM call</text>
+<text x="600" y="80" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#993556">OpenAI</text></g>
+<line x1="674" y1="72" x2="684" y2="72" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#ho1)"/>
+
+<g><rect x="684" y="40" width="148" height="64" rx="8" fill="#FAEEDA" stroke="#854F0B" stroke-width="0.5"/>
+<text x="758" y="60" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#412402">Evaluation</text>
+<text x="758" y="80" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#633806">DeepEval</text></g>
+<line x1="832" y1="72" x2="842" y2="72" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#ho1)"/>
+<text x="758" y="122" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#5F5E5A">not ok -&gt; retry</text>
+
+<g><rect x="842" y="40" width="148" height="64" rx="8" fill="#FAECE7" stroke="#993C1D" stroke-width="0.5"/>
+<text x="916" y="60" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#4A1B0C">Guardrail</text>
+<text x="916" y="80" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#712B13">NeMo Guardrails</text></g>
+<line x1="990" y1="72" x2="1000" y2="72" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#ho1)"/>
+
+<g><rect x="1000" y="40" width="148" height="64" rx="8" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.5"/>
+<text x="1074" y="60" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#2C2C2A">Observability</text>
+<text x="1074" y="80" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#5F5E5A">Tokens &amp; cost</text></g>
+</svg>
