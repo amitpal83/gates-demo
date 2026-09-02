@@ -51,10 +51,6 @@ _ALLOWED_TOPICS = {
     "average",
     "sum",
     "count",
-    "highest",
-    "lowest",
-    "top",
-    "bottom",
 }
 
 
@@ -85,15 +81,34 @@ class SecurityGuardrail:
 
     def check_topic_relevance(self, question: str) -> GuardrailResult:
         """Check if the question is on-topic for the SQL agent domain."""
+        if self.backend == "nemo-guardrails" and self._rails is not None:
+            return self._check_topic_relevance_live(question)
+
+        return self._check_topic_relevance_fallback(question)
+
+    def _check_topic_relevance_live(self, question: str) -> GuardrailResult:
+        try:
+            result = self._rails.generate(
+                messages=[{"role": "user", "content": question}]
+            )
+        except Exception:
+            return self._check_topic_relevance_fallback(question)
+
+        if "TOPIC_ALLOWED" in str(result).upper():
+            return GuardrailResult(True, None, "nemo-guardrails")
+        fallback_result = self._check_topic_relevance_fallback(question)
+        if fallback_result.allowed:
+            return GuardrailResult(True, None, "nemo-guardrails+topic-fallback")
+        return GuardrailResult(False, "off_topic_question", "nemo-guardrails")
+
+    def _check_topic_relevance_fallback(self, question: str) -> GuardrailResult:
         question_lower = question.lower()
         question_words = set(re.findall(r"\b\w+\b", question_lower))
-        
-        # Check if any allowed topic keywords are present
         matching_topics = question_words & _ALLOWED_TOPICS
-        
+
         if matching_topics:
             return GuardrailResult(True, None, "topic-check")
-        
+
         return GuardrailResult(
             False,
             "off_topic_question",

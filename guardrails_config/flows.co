@@ -1,6 +1,15 @@
 define bot safe sql response
   "Safe to proceed."
 
+define user ask about GATES project data
+  "What is the total budget by region?"
+  "Which projects have the lowest utilization rate?"
+  "Show the agency with the highest budget."
+  "How many projects are in each region?"
+
+define bot topic allowed
+  "TOPIC_ALLOWED"
+
 define bot off topic response
   "I can only answer questions about R&D project budgets, utilization rates, and agency data. Please ask about budget by region, agency, utilization rates, or project details."
 
@@ -8,7 +17,6 @@ define flow check_sql_output
   bot safe sql response
 
 define flow check_topic_relevance
-  # This flow validates that user input is on-topic
-  # Allowed topics: budget, utilization, agency, region, project
-  bot off topic response
+  user ask about GATES project data
+  bot topic allowed
 
