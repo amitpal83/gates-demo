@@ -3,7 +3,7 @@ agents.rag_flow
 -------------------
 Runnable demo of the HLD RAG Flow:
 
-    LangChain framework
+    LangChain framework (prompt + generation chain)
     -> Input validation (pass / fail)
     -> Take a PDF -> chunk it
     -> Embed chunks -> store embeddings
@@ -25,6 +25,8 @@ import re
 import sys
 
 import numpy as np
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnableLambda
 
 from gates_ai_common import config
 from gates_ai_common.input_validation import InputValidator
@@ -185,6 +187,20 @@ class RAGAgent:
         self.guardrail = SecurityGuardrail()
         self.store = InMemoryVectorStore()
 
+    def build_answer_chain(self, system_prompt: str):
+        """Create the default LangChain prompt and LLM generation chain."""
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", system_prompt),
+            ("human", "Context:\n{context}\n\nQuestion: {question}"),
+        ])
+
+        def complete(prompt_value):
+            messages = prompt_value.to_messages()
+            answer, usage = self.llm.complete(messages[0].content, messages[-1].content)
+            return {"answer": answer, "usage": usage}
+
+        return prompt | RunnableLambda(complete)
+
     def ingest(self, pdf_path: str):
         text = load_pdf_text(pdf_path)
         chunks = chunk_text(text)
@@ -211,14 +227,17 @@ class RAGAgent:
         top_chunks = [c for c, _ in reranked[:2]]
         stages["reranked_top_2"] = [c[:50] + "..." for c in top_chunks]
 
-        # 4. Prompt chain
+        # 4. LangChain prompt and generation chain
         system = self.prompts.get("rag_agent.system")
         context_block = "\n".join(top_chunks)
-        user_prompt = f"Context:\n{context_block}\n\nQuestion: {question}"
+        chain = self.build_answer_chain(system)
 
-        # 5. Ask the LLM
-        answer, usage = self.llm.complete(system, user_prompt)
+        # 5. Ask the LLM through LangChain
+        chain_result = chain.invoke({"context": context_block, "question": question})
+        answer = chain_result["answer"]
+        usage = chain_result["usage"]
         stages["answer"] = answer
+        stages["chain_backend"] = "langchain"
         stages["llm_backend"] = self.llm.backend
 
         # 6. Evaluation
