@@ -1,6 +1,7 @@
 import logging
 import streamlit as st
 
+from gates_ai_common import config
 from agents.orchestration_flow import OrchestratorAgent
 from agents.rag_flow import RAGAgent, ensure_sample_pdf
 from agents.sql_agent import SQLAgent, build_demo_database
@@ -23,33 +24,39 @@ DEMO_QUESTIONS = [
 ]
 
 
-@st.cache_resource
 def get_agent():
-    logger.info("Initializing SQLAgent...")
-    conn = build_demo_database()
-    logger.info("Database connection created")
-    agent = SQLAgent(conn)
-    logger.info(f"SQLAgent initialized with prompt backend: {agent.prompts.backend}")
-    return agent
+    if "sql_agent" not in st.session_state:
+        logger.info("Initializing SQLAgent for this session...")
+        conn = build_demo_database()
+        st.session_state.sql_agent = SQLAgent(conn)
+    return st.session_state.sql_agent
 
 
-@st.cache_resource
 def get_rag_agent():
-    logger.info("Initializing RAGAgent...")
-    agent = RAGAgent()
-    chunk_count = agent.ingest(ensure_sample_pdf())
-    logger.info(f"RAGAgent initialized with {chunk_count} chunks")
-    return agent, chunk_count
+    if "rag_agent" not in st.session_state:
+        logger.info("Initializing RAGAgent for this session...")
+        agent = RAGAgent()
+        chunk_count = agent.ingest(ensure_sample_pdf())
+        st.session_state.rag_agent = (agent, chunk_count)
+    return st.session_state.rag_agent
 
 
-@st.cache_resource
 def get_orchestrator_agent():
-    logger.info("Initializing LangGraph OrchestratorAgent...")
-    return OrchestratorAgent()
+    if "orchestrator_agent" not in st.session_state:
+        logger.info("Initializing LangGraph OrchestratorAgent for this session...")
+        st.session_state.orchestrator_agent = OrchestratorAgent()
+    return st.session_state.orchestrator_agent
 
 
 st.set_page_config(page_title="GATES AI Demos", layout="wide")
 st.title("GATES AI Demos")
+
+production_errors = config.production_configuration_errors()
+if production_errors:
+    st.error("Production configuration is incomplete: " + " ".join(production_errors))
+    st.stop()
+if not config.USE_LIVE_LLM:
+    st.warning("Development mode: OPENAI_API_KEY is not configured, so agents use deterministic mock LLM responses.")
 
 with st.sidebar:
     st.header("SQL sample questions")

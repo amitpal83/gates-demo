@@ -23,7 +23,7 @@ class LLMClient:
         self.backend = "openai" if config.USE_LIVE_LLM else "mock"
         self._mock_fn = mock_fn or (lambda system, user: f"[mock response to: {user[:60]}...]")
         if self.backend == "openai":
-            self._client = OpenAI()
+            self._client = OpenAI(timeout=config.LLM_REQUEST_TIMEOUT_SECONDS, max_retries=2)
 
     def complete(self, system: str, user: str) -> tuple[str, dict]:
         """Returns (text, usage) where usage has input/output token counts."""

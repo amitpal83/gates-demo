@@ -14,9 +14,12 @@ Fallback backend    : explicit content-policy checks for PII / unsafe
 This module is intentionally strict: the safety gate should fail on
 real unsafe output, not merely on a canned refusal sentence.
 """
+import logging
 import re
 
 from . import config
+
+logger = logging.getLogger(__name__)
 
 if config.HAS_NEMOGUARDRAILS:
     from nemoguardrails import LLMRails, RailsConfig
@@ -82,11 +85,11 @@ class SecurityGuardrail:
             try:
                 self._rails = LLMRails(RailsConfig.from_path(config_path))
                 self.backend = "nemo-guardrails"
-            except Exception:
+            except Exception as error:
+                logger.warning("Unable to initialize NeMo Guardrails; using keyword fallback: %s", error)
                 self.backend = "keyword-fallback"
         elif config.HAS_NEMOGUARDRAILS:
-            # Keep the fallback active unless a valid config directory is supplied.
-            # The SQL agent passes a concrete Rails config path, so the live path can be used.
+            logger.warning("NeMo Guardrails is installed but no configuration was supplied; using keyword fallback.")
             self.backend = "keyword-fallback"
 
     def check_topic_relevance(self, question: str) -> GuardrailResult:

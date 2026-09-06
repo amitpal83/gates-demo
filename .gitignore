@@ -1,6 +1,14 @@
 .env
 .venv*/
+venv*/
 __pycache__/
 .pytest_cache/
 .deepeval/
 gates_ai_common/observability.log
+*.pyc
+.mypy_cache/
+.coverage
+htmlcov/
+build/
+dist/
+*.egg-info/

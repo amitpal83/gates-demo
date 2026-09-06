@@ -28,6 +28,7 @@ automatically (see gates_ai_common/config.py).
 import re
 import sqlite3
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -110,6 +111,10 @@ class MockLLM(BaseChatModel):
     def _llm_type(self) -> str:
         return "mock"
 
+    def bind_tools(self, tools, *, tool_choice=None, **kwargs):
+        """Return this deterministic development model for LangChain SQL tools."""
+        return self
+
 
 if not LANGCHAIN_AVAILABLE:
     raise ImportError(
@@ -143,7 +148,7 @@ def build_demo_database() -> sqlite3.Connection:
     """Creates and seeds an in-memory SQLite DB standing in for the
     GATES lakehouse gold-layer table this agent would query in
     production (via Trino, not sqlite3)."""
-    conn = sqlite3.connect(":memory:", check_same_thread=False)
+    conn = sqlite3.connect(":memory:")
     conn.execute(SCHEMA_DDL)
     conn.executemany(
         "INSERT INTO rd_project_monitoring VALUES (?, ?, ?, ?, ?, ?, ?)", SAMPLE_ROWS
@@ -190,6 +195,7 @@ class SQLAgent:
         self.db = None
         self.agent = None
         self.model = "gpt-4o-mini"
+        self._temp_db_path: Path | None = None
         self.last_executed_sql = None  # Track SQL for evaluation
         
         self.validator = InputValidator()
@@ -206,19 +212,19 @@ class SQLAgent:
         try:
             # For demo mode with in-memory DB, save to temp file so LangChain can access it
             if self.db_conn:
-                import tempfile
-                import os
-                # Create a temporary SQLite database file
-                temp_dir = tempfile.gettempdir()
-                temp_db_file = os.path.join(temp_dir, "gates_demo_temp.db")
+                temp_file = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+                temp_file.close()
+                self._temp_db_path = Path(temp_file.name)
                 
                 # Export in-memory DB to file
-                file_conn = sqlite3.connect(temp_db_file)
-                self.db_conn.backup(file_conn)
-                file_conn.close()
+                file_conn = sqlite3.connect(self._temp_db_path)
+                try:
+                    self.db_conn.backup(file_conn)
+                finally:
+                    file_conn.close()
                 
                 # Use the file-based URI
-                self.db_uri = f"sqlite:///{temp_db_file}"
+                self.db_uri = f"sqlite:///{self._temp_db_path.as_posix()}"
             
             # Set up the SQL database using LangChain
             self.db = SQLDatabase.from_uri(self.db_uri)
@@ -227,7 +233,12 @@ class SQLAgent:
             if config.USE_LIVE_LLM:
                 try:
                     from langchain_openai import ChatOpenAI
-                    llm = ChatOpenAI(model=self.model, temperature=0)
+                    llm = ChatOpenAI(
+                        model=self.model,
+                        temperature=0,
+                        timeout=config.LLM_REQUEST_TIMEOUT_SECONDS,
+                        max_retries=2,
+                    )
                 except ImportError:
                     raise ImportError(
                         "langchain-openai is required for production mode. "
@@ -249,6 +260,14 @@ class SQLAgent:
             
         except Exception as e:
             raise RuntimeError(f"Failed to set up LangChain SQL agent: {e}")
+
+    def close(self):
+        """Release the demo database file created for LangChain."""
+        if self.db is not None:
+            self.db._engine.dispose()
+        if self._temp_db_path and self._temp_db_path.exists():
+            self._temp_db_path.unlink()
+            self._temp_db_path = None
     
     @trace(name="sql_agent_run")
     def run(self, question: str) -> dict:

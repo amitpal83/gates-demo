@@ -11,6 +11,7 @@ Fallback backend    : appends a JSON line per call to observability.log
 """
 import functools
 import json
+import logging
 import os
 import time
 
@@ -20,6 +21,7 @@ if config.USE_LIVE_LANGFUSE:
     from langfuse import get_client, observe
 
 _LOG_PATH = os.path.join(os.path.dirname(__file__), "observability.log")
+logger = logging.getLogger(__name__)
 
 # Rough per-1k-token pricing used only by the fallback cost estimate.
 _PRICE_PER_1K_INPUT_USD = 0.0015
@@ -75,5 +77,8 @@ def log_usage(agent_path: str, input_tokens: int, output_tokens: int, model: str
 
 
 def _append(record: dict):
-    with open(_LOG_PATH, "a") as f:
-        f.write(json.dumps(record) + "\n")
+    try:
+        with open(_LOG_PATH, "a", encoding="utf-8") as log_file:
+            log_file.write(json.dumps(record) + "\n")
+    except OSError as error:
+        logger.warning("Unable to write local observability log: %s", error)
