@@ -1,0 +1,17 @@
+define user ask about GATES factsheet
+  "What GPU cluster does GATES use?"
+  "How many H200 GPUs does the GATES program have?"
+  "What vector store does GATES use for retrieval?"
+  "Which organizations are part of the GATES program?"
+  "What does the GATES lakehouse use?"
+  "What does Langfuse track for GATES?"
+
+define bot topic allowed
+  "TOPIC_ALLOWED"
+
+define bot off topic response
+  "I can only answer questions about the indexed GATES factsheet."
+
+define flow check_rag_topic_relevance
+  user ask about GATES factsheet
+  bot topic allowed

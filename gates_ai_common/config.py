@@ -36,6 +36,7 @@ else:
     os.environ.setdefault("REQUESTS_CA_BUNDLE", certifi.where())
 
 os.environ.setdefault("LANGFUSE_HOST", "https://cloud.langfuse.com")
+os.environ.setdefault("NEMO_GUARDRAILS_NO_USAGE_STATS", "1")
 
 
 def _installed(module_name: str) -> bool:

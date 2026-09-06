@@ -22,7 +22,19 @@ path -- watch the printed trace change accordingly.
 Production stack: pip install langchain langgraph openai llm-guard
 nemoguardrails deepeval langfuse
 """
+import json
+import re
 import sys
+from pathlib import Path
+from typing import TypedDict
+
+from langgraph.graph import END, START, StateGraph
+
+# Add the project root when this module is run directly as a script.
+if __package__ is None or __package__ == "":
+    project_root = Path(__file__).resolve().parents[1]
+    if str(project_root) not in sys.path:
+        sys.path.insert(0, str(project_root))
 
 from gates_ai_common import config
 from gates_ai_common.input_validation import InputValidator
@@ -32,106 +44,184 @@ from gates_ai_common.evaluation import ResponseEvaluator
 from gates_ai_common.guardrails import SecurityGuardrail
 from gates_ai_common.observability import trace, log_usage
 
-MAX_RETRIES = 2
+ORCHESTRATION_GUARDRAILS_PATH = Path(__file__).resolve().parents[1] / "guardrails_config" / "orchestration"
 
 
-def route(question: str) -> str:
-    """Decides simple (LangChain) vs multi-agent (LangGraph) orchestration.
+class OrchestrationState(TypedDict, total=False):
+    question: str
+    status: str
+    plan: list[str]
+    task_results: list[dict]
+    answer: str
+    stages: dict
 
-    Production: this would be an LLM-based or rule-based classifier
-    node. Demo heuristic: more than one clause/sub-ask -> multi-agent.
-    """
-    sub_asks = question.count(" and ") + question.count(";")
-    return "multi_agent" if sub_asks >= 1 else "simple"
+
+class SubtaskState(TypedDict, total=False):
+    task: str
+    status: str
+    answer: str
+    stages: dict
 
 
 def mock_answer(system: str, user: str) -> str:
-    return f"Summary based on: {user.split('Question:')[-1].strip()[:80]}"
+    if "Return JSON only" in system:
+        question = user.split("Question:", 1)[-1].strip()
+        tasks = [part.strip() for part in re.split(r"\s+(?:and|then)\s+|;", question) if part.strip()]
+        return json.dumps({"tasks": tasks or [question]})
+    if "Subtask results:" in user:
+        return " ".join(re.findall(r"Answer: (.*)", user))
+    return f"Answer based on subtask: {user.split('Task:', 1)[-1].strip()[:120]}"
 
 
-@trace(name="simple_orchestration")
-def run_simple(question: str, prompts: PromptLibrary, llm: LLMClient) -> tuple[str, dict]:
-    """LangChain-style single chain: one prompt, one LLM call."""
-    system = prompts.get("orchestration_agent.system")
-    answer, usage = llm.complete(system, f"Question: {question}")
-    return answer, usage
+class OrchestratorAgent:
+    """LangGraph orchestrator for generic LLM subtasks only."""
 
+    def __init__(self):
+        self.prompts = PromptLibrary()
+        self.llm = LLMClient(model="gpt-4o-mini", mock_fn=mock_answer)
+        self.guardrail = SecurityGuardrail(config_path=str(ORCHESTRATION_GUARDRAILS_PATH))
+        self.subtask_graph = self._build_subtask_graph()
+        self.graph = self._build_graph()
 
-@trace(name="multi_agent_orchestration")
-def run_multi_agent(question: str, prompts: PromptLibrary, llm: LLMClient) -> tuple[str, dict]:
-    """LangGraph-style multi-step orchestration: split into sub-asks,
-    answer each, then synthesize. A real implementation would use
-    langgraph.graph.StateGraph with one node per step; this demo
-    inlines the same three steps as plain function calls so it runs
-    without the langgraph package installed.
-    """
-    system = prompts.get("orchestration_agent.system")
-    sub_asks = [s.strip() for s in question.replace(";", " and ").split(" and ") if s.strip()]
+    def _build_subtask_graph(self):
+        graph = StateGraph(SubtaskState)
+        graph.add_node("validate", self._validate_subtask)
+        graph.add_node("execute", self._execute_subtask)
+        graph.add_node("evaluate", self._evaluate_subtask)
+        graph.add_node("guard", self._guard_subtask)
+        graph.add_edge(START, "validate")
+        graph.add_edge("validate", "execute")
+        graph.add_edge("execute", "evaluate")
+        graph.add_edge("evaluate", "guard")
+        graph.add_edge("guard", END)
+        return graph.compile()
 
-    total_usage = {"input_tokens": 0, "output_tokens": 0}
-    partial_answers = []
-    for sub_ask in sub_asks:
-        partial, usage = llm.complete(system, f"Question: {sub_ask}")
-        partial_answers.append(partial)
-        total_usage["input_tokens"] += usage["input_tokens"]
-        total_usage["output_tokens"] += usage["output_tokens"]
+    def _build_graph(self):
+        graph = StateGraph(OrchestrationState)
+        graph.add_node("validate_input", self._validate_input)
+        graph.add_node("plan_tasks", self._plan_tasks)
+        graph.add_node("execute_tasks", self._execute_tasks)
+        graph.add_node("combine_results", self._combine_results)
+        graph.add_node("final_guard", self._final_guard)
+        graph.add_edge(START, "validate_input")
+        graph.add_edge("validate_input", "plan_tasks")
+        graph.add_edge("plan_tasks", "execute_tasks")
+        graph.add_edge("execute_tasks", "combine_results")
+        graph.add_edge("combine_results", "final_guard")
+        graph.add_edge("final_guard", END)
+        return graph.compile()
 
-    synthesis_prompt = "Combine these into one coherent answer: " + " | ".join(partial_answers)
-    final_answer, usage = llm.complete(system, synthesis_prompt)
-    total_usage["input_tokens"] += usage["input_tokens"]
-    total_usage["output_tokens"] += usage["output_tokens"]
-    return final_answer, total_usage
+    def _validate_input(self, state: OrchestrationState) -> dict:
+        validation = InputValidator().validate(state["question"])
+        stages = {"input_validation": vars(validation), "orchestration_path": "langgraph_multi_agent"}
+        if not validation.is_safe:
+            return {"status": "blocked_at_input_validation", "stages": stages}
+        return {"status": "running", "stages": stages}
+
+    def _plan_tasks(self, state: OrchestrationState) -> dict:
+        if state["status"] != "running":
+            return {}
+        planner_prompt = self.prompts.get("orchestration_agent.planner")
+        plan_text, usage = self.llm.complete(planner_prompt, f"Question: {state['question']}")
+        try:
+            tasks = json.loads(plan_text)["tasks"]
+            tasks = [task.strip() for task in tasks if isinstance(task, str) and task.strip()]
+        except (json.JSONDecodeError, KeyError, TypeError):
+            tasks = [state["question"]]
+        stages = dict(state["stages"])
+        stages["plan"] = tasks
+        stages["planner_prompt"] = {
+            "backend": self.prompts.backend,
+            "source": self.prompts.last_fetch_source,
+            "name": self.prompts.last_fetch_name,
+            "version": self.prompts.last_fetch_version,
+        }
+        stages["planner_usage"] = log_usage("orchestration:planner", usage["input_tokens"], usage["output_tokens"], self.llm.model)
+        return {"plan": tasks or [state["question"]], "stages": stages}
+
+    def _validate_subtask(self, state: SubtaskState) -> dict:
+        validation = InputValidator().validate(state["task"])
+        stages = {"input_validation": vars(validation)}
+        return {"status": "running" if validation.is_safe else "blocked_at_input_validation", "stages": stages}
+
+    def _execute_subtask(self, state: SubtaskState) -> dict:
+        if state["status"] != "running":
+            return {}
+        prompt = self.prompts.get("orchestration_agent.system")
+        answer, usage = self.llm.complete(prompt, f"Task: {state['task']}")
+        stages = dict(state["stages"])
+        stages["prompt"] = {
+            "backend": self.prompts.backend,
+            "source": self.prompts.last_fetch_source,
+            "name": self.prompts.last_fetch_name,
+            "version": self.prompts.last_fetch_version,
+        }
+        stages["usage"] = log_usage("orchestration:subtask", usage["input_tokens"], usage["output_tokens"], self.llm.model)
+        return {"answer": answer, "stages": stages}
+
+    def _evaluate_subtask(self, state: SubtaskState) -> dict:
+        if state["status"] != "running":
+            return {}
+        evaluation = ResponseEvaluator(threshold=0.0).evaluate(state["task"], state.get("answer", ""), context=[])
+        stages = dict(state["stages"])
+        stages["evaluation"] = vars(evaluation)
+        return {"status": "running" if evaluation.passed else "failed_evaluation", "stages": stages}
+
+    def _guard_subtask(self, state: SubtaskState) -> dict:
+        if state["status"] != "running":
+            return {}
+        guardrail = self.guardrail.check(state.get("answer", ""))
+        stages = dict(state["stages"])
+        stages["guardrail"] = vars(guardrail)
+        return {"status": "ok" if guardrail.allowed else "blocked_by_guardrail", "stages": stages}
+
+    def _execute_tasks(self, state: OrchestrationState) -> dict:
+        if state["status"] != "running":
+            return {}
+        task_results = [self.subtask_graph.invoke({"task": task}) for task in state["plan"]]
+        stages = dict(state["stages"])
+        stages["subtask_count"] = len(task_results)
+        return {"task_results": task_results, "stages": stages}
+
+    def _combine_results(self, state: OrchestrationState) -> dict:
+        if state["status"] != "running":
+            return {}
+        successful = [result for result in state["task_results"] if result.get("status") == "ok"]
+        if not successful:
+            return {"status": "no_subtask_completed"}
+        synthesis_prompt = self.prompts.get("orchestration_agent.synthesizer")
+        task_text = "\n".join(f"Task: {result['task']}\nAnswer: {result['answer']}" for result in successful)
+        answer, usage = self.llm.complete(synthesis_prompt, f"Question: {state['question']}\n\nSubtask results:\n{task_text}")
+        evaluation = ResponseEvaluator(threshold=0.0).evaluate(state["question"], answer, context=[])
+        stages = dict(state["stages"])
+        stages["synthesis"] = {
+            "prompt": {
+                "backend": self.prompts.backend,
+                "source": self.prompts.last_fetch_source,
+                "name": self.prompts.last_fetch_name,
+                "version": self.prompts.last_fetch_version,
+            },
+            "evaluation": vars(evaluation),
+            "usage": log_usage("orchestration:synthesis", usage["input_tokens"], usage["output_tokens"], self.llm.model),
+        }
+        return {"answer": answer, "status": "running" if evaluation.passed else "failed_evaluation", "stages": stages}
+
+    def _final_guard(self, state: OrchestrationState) -> dict:
+        if state["status"] != "running":
+            return {}
+        guardrail = self.guardrail.check(state.get("answer", ""))
+        stages = dict(state["stages"])
+        stages["final_guardrail"] = vars(guardrail)
+        return {"status": "ok" if guardrail.allowed else "blocked_by_guardrail", "stages": stages}
+
+    @trace(name="langgraph_orchestration")
+    def run(self, question: str) -> dict:
+        return self.graph.invoke({"question": question})
 
 
 def run_pipeline(question: str) -> dict:
-    validator = InputValidator()
-    prompts = PromptLibrary()
-    llm = LLMClient(model="gpt-4o-mini", mock_fn=mock_answer)
-    evaluator = ResponseEvaluator(threshold=0.0)  # no retrieval context in this flow -> neutral pass/fail
-    guardrail = SecurityGuardrail()
-
-    stages = {}
-
-    # 1/2. Router chooses LangChain vs LangGraph path
-    path = route(question)
-    stages["orchestration_path"] = path
-
-    # 3. Input validation
-    validation = validator.validate(question)
-    stages["input_validation"] = vars(validation)
-    if not validation.is_safe:
-        return {"status": "blocked_at_input_validation", "stages": stages}
-
-    # 4-5. Prompt library + LLM call, with an evaluation retry loop
-    attempt = 0
-    while True:
-        attempt += 1
-        if path == "simple":
-            answer, usage = run_simple(question, prompts, llm)
-        else:
-            answer, usage = run_multi_agent(question, prompts, llm)
-
-        # 6. Evaluation
-        eval_result = evaluator.evaluate(question, answer, context=[])
-        stages[f"evaluation_attempt_{attempt}"] = eval_result.__dict__
-        if eval_result.passed or attempt >= MAX_RETRIES:
-            break
-
-    if not eval_result.passed:
-        return {"status": "failed_evaluation_after_retries", "stages": stages}
-
-    # 7. Security guardrail
-    guard_result = guardrail.check(answer)
-    stages["guardrail"] = vars(guard_result)
-    if not guard_result.allowed:
-        return {"status": "blocked_by_guardrail", "stages": stages}
-
-    # 8. Observability -- tokens & cost / pricing & cost
-    usage_record = log_usage(agent_path=f"orchestration:{path}", input_tokens=usage["input_tokens"],
-                              output_tokens=usage["output_tokens"], model=llm.model)
-    stages["usage"] = usage_record
-
-    return {"status": "ok", "answer": answer, "stages": stages}
+    """Backward-compatible entry point for the LangGraph orchestrator."""
+    return OrchestratorAgent().run(question)
 
 
 def main():

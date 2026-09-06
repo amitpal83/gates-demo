@@ -53,6 +53,15 @@ _ALLOWED_TOPICS = {
     "count",
 }
 
+_RETRIEVAL_STOP_WORDS = {
+    "about", "after", "also", "and", "are", "before", "can", "could", "does",
+    "explain", "fact", "factsheet", "for", "from", "gates", "give", "have", "how",
+    "into", "list", "more", "of", "program", "question", "sheet", "show", "tell",
+    "that", "the", "than", "their", "there", "these", "they", "this", "use", "uses",
+    "using", "was", "what", "when", "where", "which", "while", "who", "with", "would",
+    "you", "your",
+}
+
 
 class GuardrailResult:
     def __init__(self, allowed: bool, reason: str | None, backend: str):
@@ -65,9 +74,10 @@ class GuardrailResult:
 
 
 class SecurityGuardrail:
-    def __init__(self, config_path: str | None = None):
+    def __init__(self, config_path: str | None = None, allowed_topics: set[str] | None = None):
         self.backend = "keyword-fallback"
         self._rails = None
+        self._allowed_topics = allowed_topics or _ALLOWED_TOPICS
         if config.HAS_NEMOGUARDRAILS and config_path:
             try:
                 self._rails = LLMRails(RailsConfig.from_path(config_path))
@@ -86,25 +96,52 @@ class SecurityGuardrail:
 
         return self._check_topic_relevance_fallback(question)
 
+    def check_retrieval_relevance(self, question: str, context: list[str]) -> GuardrailResult:
+        """Reject questions that cannot be answered from the indexed source."""
+        def meaningful_terms(text: str) -> set[str]:
+            words = re.findall(r"[a-z]{3,}", text.lower())
+            return {
+                word[:-1] if word.endswith("s") and len(word) > 3 else word
+                for word in words
+                if word not in _RETRIEVAL_STOP_WORDS
+            }
+
+        question_terms = meaningful_terms(question)
+        context_terms = meaningful_terms(" ".join(context))
+        matched_terms = question_terms & context_terms
+
+        if matched_terms:
+            return GuardrailResult(True, None, "retrieval-relevance-check")
+        return GuardrailResult(
+            False,
+            "question_not_supported_by_indexed_context",
+            "retrieval-relevance-check",
+        )
+
     def _check_topic_relevance_live(self, question: str) -> GuardrailResult:
+        fallback_result = self._check_topic_relevance_fallback(question)
+        if not fallback_result.allowed:
+            return GuardrailResult(
+                False,
+                "off_topic_question",
+                "nemo-guardrails-input-topic",
+            )
+
         try:
             result = self._rails.generate(
                 messages=[{"role": "user", "content": question}]
             )
         except Exception:
-            return self._check_topic_relevance_fallback(question)
+            return fallback_result
 
         if "TOPIC_ALLOWED" in str(result).upper():
             return GuardrailResult(True, None, "nemo-guardrails")
-        fallback_result = self._check_topic_relevance_fallback(question)
-        if fallback_result.allowed:
-            return GuardrailResult(True, None, "nemo-guardrails+topic-fallback")
-        return GuardrailResult(False, "off_topic_question", "nemo-guardrails")
+        return GuardrailResult(True, None, "nemo-guardrails+topic-fallback")
 
     def _check_topic_relevance_fallback(self, question: str) -> GuardrailResult:
         question_lower = question.lower()
         question_words = set(re.findall(r"\b\w+\b", question_lower))
-        matching_topics = question_words & _ALLOWED_TOPICS
+        matching_topics = question_words & self._allowed_topics
 
         if matching_topics:
             return GuardrailResult(True, None, "topic-check")

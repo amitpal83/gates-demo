@@ -23,6 +23,13 @@ sentence-transformers llm-guard nemoguardrails deepeval langfuse
 import os
 import re
 import sys
+from pathlib import Path
+
+# Add parent directory to path so gates_ai_common can be imported
+if __package__ is None or __package__ == "":
+    project_root = Path(__file__).resolve().parents[1]
+    if str(project_root) not in sys.path:
+        sys.path.insert(0, str(project_root))
 
 import numpy as np
 from langchain_core.prompts import ChatPromptTemplate
@@ -37,6 +44,13 @@ from gates_ai_common.guardrails import SecurityGuardrail
 from gates_ai_common.observability import trace, log_usage
 
 SAMPLE_PDF_PATH = os.path.join(os.path.dirname(__file__), "sample_gates_factsheet.pdf")
+RAG_GUARDRAILS_PATH = Path(__file__).resolve().parents[1] / "guardrails_config" / "rag"
+RAG_ALLOWED_TOPICS = {
+    "gates", "dost", "jica", "bcg", "disaster", "philippines", "lakehouse",
+    "iceberg", "trino", "dbt", "gpu", "gpus", "h200", "hgx", "llama", "vllm",
+    "kserve", "retrieval", "qdrant", "embedding", "embeddings", "sql", "pdra",
+    "pagasa", "phivolcs", "georiskph", "langfuse", "observability",
+}
 
 SAMPLE_TEXT = """
 GATES Program Fact Sheet
@@ -184,7 +198,10 @@ class RAGAgent:
         self.prompts = PromptLibrary()
         self.llm = LLMClient(model="gpt-4o-mini", mock_fn=mock_rag_answer)
         self.evaluator = ResponseEvaluator(threshold=0.3)
-        self.guardrail = SecurityGuardrail()
+        self.guardrail = SecurityGuardrail(
+            config_path=str(RAG_GUARDRAILS_PATH),
+            allowed_topics=RAG_ALLOWED_TOPICS,
+        )
         self.store = InMemoryVectorStore()
 
     def build_answer_chain(self, system_prompt: str):
@@ -217,6 +234,17 @@ class RAGAgent:
         if not validation.is_safe:
             return {"status": "blocked_at_input_validation", "stages": stages}
 
+        # 1.5 NeMo input topic rail: reject out-of-domain questions before retrieval or LLM use.
+        topic_check = self.guardrail.check_topic_relevance(question)
+        stages["topic_relevance"] = vars(topic_check)
+        if not topic_check.allowed:
+            stages["guardrail"] = vars(topic_check)
+            return {
+                "status": "blocked_by_guardrail",
+                "answer": "I can only answer questions about the indexed GATES factsheet.",
+                "stages": stages,
+            }
+
         # 2. Search (embed query, cosine similarity, top-k)
         query_vector = embed(question)
         hits = self.store.search(query_vector, top_k=4)
@@ -227,8 +255,24 @@ class RAGAgent:
         top_chunks = [c for c, _ in reranked[:2]]
         stages["reranked_top_2"] = [c[:50] + "..." for c in top_chunks]
 
+        # Reject questions the indexed document cannot support before generation.
+        relevance_guard = self.guardrail.check_retrieval_relevance(question, top_chunks)
+        stages["question_guardrail"] = vars(relevance_guard)
+        if not relevance_guard.allowed:
+            return {
+                "status": "blocked_by_guardrail",
+                "answer": "This question cannot be answered from the indexed GATES factsheet.",
+                "stages": stages,
+            }
+
         # 4. LangChain prompt and generation chain
         system = self.prompts.get("rag_agent.system")
+        stages["prompt"] = {
+            "backend": self.prompts.backend,
+            "source": self.prompts.last_fetch_source,
+            "name": self.prompts.last_fetch_name,
+            "version": self.prompts.last_fetch_version,
+        }
         context_block = "\n".join(top_chunks)
         chain = self.build_answer_chain(system)
 

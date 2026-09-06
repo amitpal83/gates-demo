@@ -10,3 +10,19 @@
 {"trace": "rag_agent_run", "duration_ms": 1.3, "backend": "local-log-fallback"}
 {"trace": "simple_orchestration", "duration_ms": 0.0, "backend": "local-log-fallback"}
 {"usage": {"agent_path": "orchestration:simple", "model": "gpt-4o-mini", "input_tokens": 20, "output_tokens": 8, "estimated_cost_usd": 4.6e-05}}
+{"trace": "sql_agent_run", "duration_ms": 9680.9, "backend": "local-log-fallback"}
+{"usage": {"agent_path": "sql_agent", "model": "gpt-4o-mini", "input_tokens": 7, "output_tokens": 27, "estimated_cost_usd": 6.4e-05}}
+{"trace": "sql_agent_run", "duration_ms": 7790.1, "backend": "local-log-fallback"}
+{"usage": {"agent_path": "sql_agent", "model": "gpt-4o-mini", "input_tokens": 7, "output_tokens": 27, "estimated_cost_usd": 6.4e-05}}
+{"trace": "sql_agent_run", "duration_ms": 18223.5, "backend": "local-log-fallback"}
+{"usage": {"agent_path": "sql_agent", "model": "gpt-4o-mini", "input_tokens": 7, "output_tokens": 27, "estimated_cost_usd": 6.4e-05}}
+{"trace": "sql_agent_run", "duration_ms": 19480.4, "backend": "local-log-fallback"}
+{"usage": {"agent_path": "sql_agent", "model": "gpt-4o-mini", "input_tokens": 7, "output_tokens": 27, "estimated_cost_usd": 6.4e-05}}
+{"trace": "sql_agent_run", "duration_ms": 17943.5, "backend": "local-log-fallback"}
+{"trace": "sql_agent_run", "duration_ms": 0.1, "backend": "local-log-fallback"}
+{"trace": "sql_agent_run", "duration_ms": 0.0, "backend": "local-log-fallback"}
+{"trace": "sql_agent_run", "duration_ms": 0.0, "backend": "local-log-fallback"}
+{"usage": {"agent_path": "sql_agent", "model": "gpt-4o-mini", "input_tokens": 7, "output_tokens": 27, "estimated_cost_usd": 6.4e-05}}
+{"trace": "sql_agent_run", "duration_ms": 22423.0, "backend": "local-log-fallback"}
+{"usage": {"agent_path": "sql_agent", "model": "gpt-4o-mini", "input_tokens": 7, "output_tokens": 27, "estimated_cost_usd": 6.4e-05}}
+{"trace": "sql_agent_run", "duration_ms": 19913.6, "backend": "local-log-fallback"}

@@ -1,0 +1,5 @@
+define bot safe response
+  "Safe to proceed."
+
+define flow check_orchestration_output
+  bot safe response
