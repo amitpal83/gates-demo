@@ -1,0 +1,64 @@
+# Local LiteLLM Proxy stack for the SQL Agent (LiteLLM) demo.
+#
+# Fully additive to gates_ai_lld: nothing here is required by the existing
+# agents/streamlit_app.py. Bring it up with:
+#     docker compose -f litellm/docker-compose.yml up -d
+#
+# See litellm/README.md for the full setup + demo script.
+
+services:
+  litellm-proxy:
+    image: ghcr.io/berriai/litellm:main-stable
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+      - ./guardrails:/app/guardrails:ro
+      - ../gates_ai_common:/app/gates_ai_common:ro
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY}
+      - DATABASE_URL=postgresql://litellm:${POSTGRES_PASSWORD}@postgres:5432/litellm
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - PRESIDIO_ANALYZER_API_BASE=http://presidio-analyzer:3000
+      - PRESIDIO_ANONYMIZER_API_BASE=http://presidio-anonymizer:3000
+      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY}
+      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY}
+      - PYTHONPATH=/app
+    command: ["--config", "/app/config.yaml", "--port", "4000"]
+    depends_on:
+      - redis
+      - postgres
+      - presidio-analyzer
+      - presidio-anonymizer
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_DB=litellm
+      - POSTGRES_USER=litellm
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - litellm_pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  presidio-analyzer:
+    image: mcr.microsoft.com/presidio-analyzer:latest
+    ports:
+      - "5002:3000"
+
+  presidio-anonymizer:
+    image: mcr.microsoft.com/presidio-anonymizer:latest
+    ports:
+      - "5001:3000"
+
+volumes:
+  litellm_pgdata:

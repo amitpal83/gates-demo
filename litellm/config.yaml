@@ -1,0 +1,75 @@
+# LiteLLM Proxy config for the SQL Agent (LiteLLM) demo.
+#
+# Primary model: OpenAI gpt-4o-mini (reuses the same OPENAI_API_KEY the rest
+# of gates_ai_lld already uses). Fallback model: Gemini, a genuinely
+# different provider, to demonstrate real cross-provider failover -- that's
+# LiteLLM's core value proposition (one interface, many providers).
+#
+# NOTE: verify guardrail/cache field names against your installed LiteLLM
+# image's docs -- these interfaces evolve between releases. See
+# litellm/README.md "Notes / things to verify" section.
+
+model_list:
+  - model_name: gates-sql-writer
+    litellm_params:
+      model: openai/gpt-4o-mini
+      api_key: os.environ/OPENAI_API_KEY
+
+  - model_name: gates-sql-writer-fallback
+    litellm_params:
+      model: gemini/gemini-2.0-flash
+      api_key: os.environ/GEMINI_API_KEY
+
+router_settings:
+  fallbacks:
+    - gates-sql-writer: ["gates-sql-writer-fallback"]
+  num_retries: 1
+  timeout: 30
+
+litellm_settings:
+  drop_params: true
+
+  # Caching: real Redis cache (not in-memory), so a repeated identical
+  # question is served from cache with a visible latency drop.
+  cache: true
+  cache_params:
+    type: redis
+    host: os.environ/REDIS_HOST
+    port: os.environ/REDIS_PORT
+    ttl: 300
+
+  # Observability: gateway-level Langfuse trace, distinct from (and
+  # complementary to) the app-level trace agents/sql_agent_litellm.py
+  # writes via gates_ai_common.observability.
+  success_callback: ["langfuse"]
+  failure_callback: ["langfuse"]
+
+guardrails:
+  # PII detection: masks phone numbers / emails / credit-card-shaped numbers
+  # before they reach the model, via the self-hosted Presidio containers
+  # (no third-party API key required).
+  - guardrail_name: "gates-pii-masking"
+    litellm_params:
+      guardrail: presidio
+      mode: "pre_call"
+      presidio_analyzer_api_base: os.environ/PRESIDIO_ANALYZER_API_BASE
+      presidio_anonymizer_api_base: os.environ/PRESIDIO_ANONYMIZER_API_BASE
+      pii_entities_config:
+        PHONE_NUMBER: "MASK"
+        EMAIL_ADDRESS: "MASK"
+        CREDIT_CARD: "MASK"
+
+  # Guardrailing: reuses gates_ai_common's own regex patterns (already used
+  # by the app-level InputValidator/SecurityGuardrail for the other agents)
+  # so the same governance logic now runs at the gateway instead.
+  - guardrail_name: "gates-keyword-guardrail"
+    litellm_params:
+      guardrail: guardrails.gates_keyword_guardrail.guardrail_gates_keyword
+      mode: ["pre_call", "post_call"]
+
+general_settings:
+  # Admin API auth (virtual key management, spend/budget queries).
+  master_key: os.environ/LITELLM_MASTER_KEY
+  # Enables virtual keys + persistent spend/budget tracking -- the "memory"
+  # LiteLLM itself provides, backed by Postgres so it survives restarts.
+  database_url: os.environ/DATABASE_URL
