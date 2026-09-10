@@ -12,46 +12,104 @@ This is fully additive: nothing here changes `agents/sql_agent.py`,
 isn't running (or the env vars below aren't set), `agents/sql_agent_litellm.py`
 falls back to the same offline `MockLLM` the original SQL agent uses.
 
-## 1. Configure secrets
+## Running on an Ubuntu EC2 instance
 
-    cp litellm/env.sample litellm/.env
-    # then fill in OPENAI_API_KEY, GEMINI_API_KEY, LITELLM_MASTER_KEY, POSTGRES_PASSWORD
-    # (LANGFUSE_* are optional -- omit them to skip the gateway-side Langfuse trace)
+This is written for the case where the repo + Python venv are already on
+the box and only the LiteLLM stack is left to set up. All container ports
+in `litellm/docker-compose.yml` are bound to `127.0.0.1` only, so the app
+(running outside Docker, in your existing venv) talks to the proxy at
+`http://localhost:4000` exactly as it would locally -- Postgres/Redis/
+Presidio are never reachable from outside the box, and no security-group
+change is needed for the stack itself.
 
-## 2. Start the stack
+**Instance size** -- Presidio's analyzer image bundles an NLP model and is
+not lightweight; running LiteLLM + Postgres + Redis + both Presidio
+containers + your Streamlit app on one box wants at least a `t3.medium`
+(2 vCPU / 4 GB RAM). `t2.micro`/`t3.micro` will likely swap or OOM.
 
-    docker compose -f litellm/docker-compose.yml up -d
+### 1. Install Docker
 
-This brings up:
-- `litellm-proxy` (port 4000) -- the gateway itself
-- `redis` -- real cache backend (not in-memory)
-- `postgres` -- persists virtual keys + spend/budget ("memory")
-- `presidio-analyzer` / `presidio-anonymizer` -- self-hosted PII detection/masking
+    sudo apt-get update
+    sudo apt-get install -y docker.io
+    sudo systemctl enable --now docker
+    sudo usermod -aG docker $USER
+    newgrp docker   # or log out/in over SSH -- either way, needed for group membership to apply
 
-## 3. Create a virtual key
+`docker-compose-plugin` is not in Ubuntu's default apt repos (it lives in
+Docker's own repo), so install the Compose v2 CLI plugin as a binary
+instead -- works regardless of where your Docker Engine package came from:
 
+    mkdir -p ~/.docker/cli-plugins
+    ARCH=$(uname -m)   # x86_64 or aarch64
+    curl -SL "https://github.com/docker/compose/releases/latest/download/docker-compose-linux-${ARCH}" \
+      -o ~/.docker/cli-plugins/docker-compose
+    chmod +x ~/.docker/cli-plugins/docker-compose
+
+Verify: `docker --version && docker compose version`.
+
+### 2. Configure secrets
+
+    cd litellm
+    cp env.sample .env
+    nano .env
+
+Fill in `OPENAI_API_KEY` (same one the app's root `.env` already uses),
+`GEMINI_API_KEY` (copy the value from the root `.env`'s `GOOGLE_API_KEY` --
+LiteLLM's `gemini/` provider reads this specific name), `LITELLM_MASTER_KEY`
+(any long random string), `POSTGRES_PASSWORD` (any string). Leave
+`LANGFUSE_*` blank to skip the gateway-side Langfuse trace.
+
+### 3. Start the stack
+
+    docker compose up -d
+    docker compose ps                     # all 4 services should show "Up"
+    docker compose logs -f litellm-proxy   # watch it boot, Ctrl-C once it's serving
+
+### 4. Create a virtual key
+
+Run from the same box (port 4000 is bound to `127.0.0.1` only):
+
+    source .env   # so $LITELLM_MASTER_KEY is set in this shell
     curl -X POST http://localhost:4000/key/generate \
       -H "Authorization: Bearer $LITELLM_MASTER_KEY" \
       -H "Content-Type: application/json" \
       -d '{"models": ["gates-sql-writer"], "max_budget": 5}'
 
-Copy the returned `key` value.
+Copy the `key` value from the response.
 
-## 4. Point the app at the proxy
+### 5. Point the app at the proxy
 
-In `gates_ai_lld/.env` (the app's existing env file) or your shell:
+Add to the app's root `.env` (`gates_ai_lld/.env`, not `litellm/.env`):
 
     LITELLM_PROXY_URL=http://localhost:4000
-    LITELLM_VIRTUAL_KEY=<key from step 3>
-    LITELLM_MASTER_KEY=<same master key as above>   # optional, only needed for the spend/budget panel
+    LITELLM_VIRTUAL_KEY=<key from step 4>
+    LITELLM_MASTER_KEY=<same master key as litellm/.env>   # optional, only needed for the spend/budget panel
 
-## 5. Run it
+### 6. Sanity-check before touching the UI
 
+    cd ..    # back to gates_ai_lld/
+    source venv/bin/activate
     python -m agents.sql_agent_litellm "What is the total budget by region?"
 
-or start Streamlit as usual (`streamlit run streamlit_app.py`) and open the
-"SQL Agent LiteLLM" page in the sidebar -- Streamlit auto-discovers
+Look for `[backend] litellm-proxy` and `[resolved_model]` showing the real
+OpenAI model in the printed stage trace -- that confirms the whole chain
+(venv -> proxy -> OpenAI, with Redis/Postgres/Presidio/guardrail all in the
+loop) before bringing Streamlit into it.
+
+### 7. Run Streamlit persistently
+
+    tmux new -s streamlit
+    streamlit run streamlit_app.py --server.address 0.0.0.0 --server.port 8501
+    # Ctrl-B then D to detach; `tmux attach -t streamlit` to come back
+
+Reach it either via an SSH tunnel (`ssh -L 8501:localhost:8501 <user>@<ec2-host>`
+from your laptop, then browse `localhost:8501` -- no security-group change),
+or by opening port 8501 to your own IP in the security group. Either way,
+open the "SQL Agent LiteLLM" page in the sidebar -- Streamlit auto-discovers
 `pages/1_SQL_Agent_LiteLLM.py`, no other file needed to change.
+
+The demo script below is identical whether the stack runs on a laptop or on
+EC2.
 
 ## Demo script
 

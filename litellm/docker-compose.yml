@@ -5,12 +5,20 @@
 #     docker compose -f litellm/docker-compose.yml up -d
 #
 # See litellm/README.md for the full setup + demo script.
+#
+# All ports are bound to 127.0.0.1 only. On a laptop that's invisible either
+# way; on a cloud VM with a public IP it matters a lot -- Postgres/Redis/
+# Presidio have no auth of their own, so binding them to loopback means a
+# misconfigured security group can't expose them to the internet. The app
+# (Streamlit/agents, running outside Docker via the existing venv) reaches
+# the proxy at http://localhost:4000 whether it's on your laptop or on the
+# same EC2 box.
 
 services:
   litellm-proxy:
     image: ghcr.io/berriai/litellm:main-stable
     ports:
-      - "4000:4000"
+      - "127.0.0.1:4000:4000"
     volumes:
       - ./config.yaml:/app/config.yaml:ro
       - ./guardrails:/app/guardrails:ro
@@ -26,6 +34,7 @@ services:
       - PRESIDIO_ANONYMIZER_API_BASE=http://presidio-anonymizer:3000
       - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY}
       - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY}
+      - LANGFUSE_HOST=${LANGFUSE_HOST:-https://cloud.langfuse.com}
       - PYTHONPATH=/app
     command: ["--config", "/app/config.yaml", "--port", "4000"]
     depends_on:
@@ -37,7 +46,7 @@ services:
   redis:
     image: redis:7-alpine
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
 
   postgres:
     image: postgres:16-alpine
@@ -48,17 +57,17 @@ services:
     volumes:
       - litellm_pgdata:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
 
   presidio-analyzer:
     image: mcr.microsoft.com/presidio-analyzer:latest
     ports:
-      - "5002:3000"
+      - "127.0.0.1:5002:3000"
 
   presidio-anonymizer:
     image: mcr.microsoft.com/presidio-anonymizer:latest
     ports:
-      - "5001:3000"
+      - "127.0.0.1:5001:3000"
 
 volumes:
   litellm_pgdata:
