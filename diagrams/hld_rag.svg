@@ -1,91 +1,115 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1360" height="2124" viewBox="0 0 680 1062">
+<svg xmlns="http://www.w3.org/2000/svg" width="1360" height="2200" viewBox="0 0 680 1100">
 <defs>
-<marker id="a2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#5F5E5A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="rag1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#5F5E5A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
 </defs>
-<rect width="680" height="1062" fill="#FFFFFF"/>
-
-<g><rect x="250" y="20" width="280" height="52" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
-<text x="390" y="38" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#26215C">1. LangChain framework</text>
-<text x="390" y="55" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#3C3489">Orchestrates the RAG chain</text></g>
-<line x1="390" y1="72" x2="390" y2="90" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a2)"/>
-
-<g><rect x="250" y="90" width="280" height="56" rx="8" fill="#FAECE7" stroke="#993C1D" stroke-width="0.5"/>
-<text x="390" y="108" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#4A1B0C">2. Input validation</text>
-<text x="390" y="126" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#712B13">Input validation library</text></g>
-<line x1="250" y1="118" x2="200" y2="118" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a2)"/>
-<g><rect x="40" y="90" width="160" height="56" rx="8" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.5"/>
-<text x="120" y="108" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#2C2C2A">2b. Failed</text>
-<text x="120" y="126" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#5F5E5A">Request blocked</text></g>
-
-<line x1="390" y1="146" x2="390" y2="164" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a2)"/>
-<text x="398" y="158" font-family="sans-serif" font-size="12" fill="#5F5E5A">2a. validated</text>
-
-<g><rect x="250" y="164" width="280" height="48" rx="8" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.5"/>
-<text x="390" y="182" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#2C2C2A">3. Take a PDF</text>
-<text x="390" y="200" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#5F5E5A">Source document</text></g>
-<line x1="390" y1="212" x2="390" y2="230" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a2)"/>
-
-<g><rect x="250" y="230" width="280" height="48" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
-<text x="390" y="248" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#042C53">4. Chunk the PDF</text>
-<text x="390" y="266" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#0C447C">Overlapping text windows</text></g>
-<line x1="390" y1="278" x2="390" y2="296" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a2)"/>
-
-<g><rect x="250" y="296" width="280" height="48" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
-<text x="390" y="314" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#042C53">5. Create embeddings</text>
-<text x="390" y="332" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#0C447C">Text to small vectors</text></g>
-<line x1="390" y1="344" x2="390" y2="362" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a2)"/>
-
-<g><rect x="250" y="362" width="280" height="48" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
-<text x="390" y="380" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#042C53">6. Store embeddings</text>
-<text x="390" y="398" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#0C447C">Vector store</text></g>
-<line x1="390" y1="410" x2="390" y2="428" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a2)"/>
-
-<g><rect x="250" y="428" width="280" height="52" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
-<text x="390" y="446" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#042C53">7. Search results</text>
-<text x="390" y="464" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#0C447C">Top-k, cosine similarity</text></g>
-<line x1="390" y1="480" x2="390" y2="498" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a2)"/>
-
-<g><rect x="250" y="498" width="280" height="48" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
-<text x="390" y="516" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#042C53">8. Rerank</text>
-<text x="390" y="534" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#0C447C">Reorder by true relevance</text></g>
-<line x1="390" y1="546" x2="390" y2="564" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a2)"/>
-
-<g><rect x="250" y="564" width="280" height="48" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
-<text x="390" y="582" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#04342C">9. Create prompt chain</text>
-<text x="390" y="600" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#085041">Context plus query</text></g>
-<line x1="390" y1="612" x2="390" y2="630" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a2)"/>
-
-<g><rect x="250" y="630" width="280" height="56" rx="8" fill="#FBEAF0" stroke="#993556" stroke-width="0.5"/>
-<text x="390" y="648" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#4B1528">10. Ask for the response</text>
-<text x="390" y="666" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#993556">LLM call</text></g>
-<line x1="390" y1="686" x2="390" y2="704" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a2)"/>
-
-<g><rect x="250" y="704" width="280" height="56" rx="8" fill="#FAEEDA" stroke="#854F0B" stroke-width="0.5"/>
-<text x="390" y="722" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#412402">11. Evaluation</text>
-<text x="390" y="740" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#633806">DeepEval scores the result</text></g>
-<path d="M250 732 L200 732 L200 658 L250 658" fill="none" stroke="#5F5E5A" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#a2)"/>
-<text x="80" y="700" font-family="sans-serif" font-size="12" fill="#5F5E5A">11b. Not OK:</text>
-<text x="80" y="716" font-family="sans-serif" font-size="12" fill="#5F5E5A">retry (capped)</text>
-
-<line x1="390" y1="760" x2="390" y2="778" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a2)"/>
-<text x="398" y="772" font-family="sans-serif" font-size="12" fill="#5F5E5A">11a. OK</text>
-
-<g><rect x="250" y="778" width="280" height="52" rx="8" fill="#FAECE7" stroke="#993C1D" stroke-width="0.5"/>
-<text x="390" y="796" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#4A1B0C">12. Security guardrail</text>
-<text x="390" y="814" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#712B13">NeMo Guardrails / Llama Guard</text></g>
-<line x1="390" y1="830" x2="390" y2="848" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a2)"/>
-
-<g><rect x="250" y="848" width="280" height="60" rx="8" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.5"/>
-<text x="390" y="866" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#2C2C2A">13. Observability</text>
-<text x="390" y="884" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#5F5E5A">Langfuse</text></g>
-<line x1="390" y1="908" x2="390" y2="926" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a2)"/>
-
-<g><rect x="290" y="926" width="200" height="44" rx="8" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.5"/>
-<text x="390" y="944" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#2C2C2A">Tokens</text>
-<text x="390" y="960" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#5F5E5A">&amp; cost</text></g>
-<line x1="390" y1="970" x2="390" y2="988" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a2)"/>
-
-<g><rect x="250" y="988" width="280" height="44" rx="8" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.5"/>
-<text x="390" y="1004" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#2C2C2A">Response</text>
-<text x="390" y="1020" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#5F5E5A">Returned to caller</text></g>
+<rect width="680" height="1100" fill="#FFFFFF"/>
+<g><rect x="20" y="20" width="640" height="112" rx="8" fill="#FFFFFF" stroke="#5F5E5A" stroke-width="0.5" stroke-dasharray="4 3"/>
+<text x="340.0" y="76.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#2C2C2A"></text>
+</g>
+<text x="40" y="42" text-anchor="start" font-family="sans-serif" font-size="14" font-weight="500" fill="#2C2C2A">Ingestion - runs once when the agent starts</text>
+<text x="40" y="60" text-anchor="start" font-family="sans-serif" font-size="12" fill="#5F5E5A">RAGAgent.ingest(pdf) -&gt; builds the vector store used by Search</text>
+<g><rect x="36" y="76" width="138" height="56" rx="8" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.5"/>
+<text x="105.0" y="96.16" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="500" fill="#2C2C2A">Take a PDF</text>
+<text x="105.0" y="114.08000000000001" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="10.5" fill="#5F5E5A">Source document</text>
+</g>
+<g><rect x="186" y="76" width="138" height="56" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+<text x="255.0" y="96.16" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="500" fill="#042C53">Chunk</text>
+<text x="255.0" y="114.08000000000001" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="10.5" fill="#0C447C">Overlapping windows</text>
+</g>
+<line x1="174" y1="104.0" x2="186" y2="104.0" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#rag1)"/>
+<g><rect x="336" y="76" width="138" height="56" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+<text x="405.0" y="96.16" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="500" fill="#042C53">Embed</text>
+<text x="405.0" y="114.08000000000001" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="10.5" fill="#0C447C">Hashed word vectors (mock)</text>
+</g>
+<line x1="324" y1="104.0" x2="336" y2="104.0" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#rag1)"/>
+<g><rect x="486" y="76" width="138" height="56" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+<text x="555.0" y="96.16" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="500" fill="#042C53">Store</text>
+<text x="555.0" y="114.08000000000001" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="10.5" fill="#0C447C">In-memory vector store</text>
+</g>
+<line x1="474" y1="104.0" x2="486" y2="104.0" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#rag1)"/>
+<text x="340" y="160" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="500" fill="#2C2C2A">Per-question pipeline - RAGAgent.run(question)</text>
+<g><rect x="250" y="180" width="280" height="56" rx="8" fill="#FAECE7" stroke="#993C1D" stroke-width="0.5"/>
+<text x="390.0" y="200.16" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#4A1B0C">1. Input validation</text>
+<text x="390.0" y="218.08" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#712B13">Screens the question (regex / llm-guard)</text>
+</g>
+<g><rect x="40" y="180" width="160" height="56" rx="8" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.5"/>
+<text x="120.0" y="200.16" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#2C2C2A">Blocked</text>
+<text x="120.0" y="218.08" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#5F5E5A">Request blocked</text>
+</g>
+<line x1="250" y1="208.0" x2="200" y2="208.0" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#rag1)"/>
+<line x1="390" y1="236" x2="390" y2="266" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#rag1)"/>
+<text x="398" y="255.0" text-anchor="start" font-family="sans-serif" font-size="12" fill="#5F5E5A">validated</text>
+<g><rect x="250" y="266" width="280" height="56" rx="8" fill="#FAECE7" stroke="#993C1D" stroke-width="0.5"/>
+<text x="390.0" y="286.16" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#4A1B0C">2. Topic guardrail</text>
+<text x="390.0" y="304.08" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#712B13">Rejects off-topic questions before retrieval</text>
+</g>
+<g><rect x="40" y="266" width="160" height="56" rx="8" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.5"/>
+<text x="120.0" y="286.16" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#2C2C2A">Blocked</text>
+<text x="120.0" y="304.08" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#5F5E5A">Blocked pre-retrieval</text>
+</g>
+<line x1="250" y1="294.0" x2="200" y2="294.0" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#rag1)"/>
+<line x1="390" y1="322" x2="390" y2="352" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#rag1)"/>
+<text x="398" y="341.0" text-anchor="start" font-family="sans-serif" font-size="12" fill="#5F5E5A">on-topic</text>
+<g><rect x="250" y="352" width="280" height="56" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+<text x="390.0" y="372.16" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#042C53">3. Search</text>
+<text x="390.0" y="390.08" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#0C447C">Embed question -&gt; cosine similarity, top-k=4</text>
+</g>
+<line x1="390" y1="408" x2="390" y2="438" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#rag1)"/>
+<g><rect x="250" y="438" width="280" height="48" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+<text x="390.0" y="455.28" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#042C53">4. Rerank</text>
+<text x="390.0" y="470.64" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#0C447C">Keep top 2 by lexical-boosted relevance</text>
+</g>
+<line x1="390" y1="486" x2="390" y2="516" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#rag1)"/>
+<g><rect x="250" y="516" width="280" height="56" rx="8" fill="#FAECE7" stroke="#993C1D" stroke-width="0.5"/>
+<text x="390.0" y="536.16" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#4A1B0C">5. Retrieval guardrail</text>
+<text x="390.0" y="554.08" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#712B13">Rejects questions the retrieved chunks don't support</text>
+</g>
+<g><rect x="40" y="516" width="160" height="56" rx="8" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.5"/>
+<text x="120.0" y="536.16" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#2C2C2A">Blocked</text>
+<text x="120.0" y="554.08" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#5F5E5A">Blocked pre-generation</text>
+</g>
+<line x1="250" y1="544.0" x2="200" y2="544.0" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#rag1)"/>
+<line x1="390" y1="572" x2="390" y2="602" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#rag1)"/>
+<text x="398" y="591.0" text-anchor="start" font-family="sans-serif" font-size="12" fill="#5F5E5A">supported</text>
+<g><rect x="250" y="602" width="280" height="48" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+<text x="390.0" y="619.28" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#04342C">6. Prompt chain</text>
+<text x="390.0" y="634.64" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#085041">LangChain: context + question</text>
+</g>
+<line x1="390" y1="650" x2="390" y2="680" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#rag1)"/>
+<g><rect x="250" y="680" width="280" height="56" rx="8" fill="#FBEAF0" stroke="#993556" stroke-width="0.5"/>
+<text x="390.0" y="700.16" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#4B1528">7. LLM call</text>
+<text x="390.0" y="718.08" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#993556">OpenAI (or mock)</text>
+</g>
+<line x1="390" y1="736" x2="390" y2="766" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#rag1)"/>
+<g><rect x="250" y="766" width="280" height="56" rx="8" fill="#FAEEDA" stroke="#854F0B" stroke-width="0.5"/>
+<text x="390.0" y="786.16" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#412402">8. Evaluation</text>
+<text x="390.0" y="804.08" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#633806">DeepEval / grounding heuristic (threshold 0.3)</text>
+</g>
+<g><rect x="40" y="766" width="160" height="56" rx="8" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.5"/>
+<text x="120.0" y="786.16" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#2C2C2A">Failed</text>
+<text x="120.0" y="804.08" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#5F5E5A">failed_evaluation</text>
+</g>
+<line x1="250" y1="794.0" x2="200" y2="794.0" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#rag1)"/>
+<line x1="390" y1="822" x2="390" y2="852" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#rag1)"/>
+<text x="398" y="841.0" text-anchor="start" font-family="sans-serif" font-size="12" fill="#5F5E5A">passed</text>
+<g><rect x="250" y="852" width="280" height="56" rx="8" fill="#FAECE7" stroke="#993C1D" stroke-width="0.5"/>
+<text x="390.0" y="872.16" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#4A1B0C">9. Security guardrail</text>
+<text x="390.0" y="890.08" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#712B13">NeMo Guardrails checks the answer</text>
+</g>
+<g><rect x="40" y="852" width="160" height="56" rx="8" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.5"/>
+<text x="120.0" y="872.16" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#2C2C2A">Blocked</text>
+<text x="120.0" y="890.08" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#5F5E5A">Response blocked</text>
+</g>
+<line x1="250" y1="880.0" x2="200" y2="880.0" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#rag1)"/>
+<line x1="390" y1="908" x2="390" y2="938" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#rag1)"/>
+<text x="398" y="927.0" text-anchor="start" font-family="sans-serif" font-size="12" fill="#5F5E5A">allowed</text>
+<g><rect x="250" y="938" width="280" height="56" rx="8" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.5"/>
+<text x="390.0" y="958.16" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#2C2C2A">10. Observability</text>
+<text x="390.0" y="976.08" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#5F5E5A">Langfuse - tokens &amp; cost</text>
+</g>
+<line x1="390" y1="994" x2="390" y2="1024" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#rag1)"/>
+<g><rect x="250" y="1024" width="280" height="48" rx="8" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.5"/>
+<text x="390.0" y="1041.28" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="500" fill="#2C2C2A">Response</text>
+<text x="390.0" y="1056.64" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#5F5E5A">Returned to caller</text>
+</g>
 </svg>
