@@ -244,9 +244,20 @@ of writing and should be spot-checked once the stack is actually running:
   than the `gates-sql-writer` alias.
 - `CustomGuardrail` hook method names/signatures in
   `litellm/guardrails/gates_keyword_guardrail.py`
-  (`async_pre_call_hook`, `async_post_call_success_hook`).
-- The `guardrail: guardrails.gates_keyword_guardrail.guardrail_gates_keyword`
-  dotted-path loading convention in `litellm/config.yaml`.
+  (`async_pre_call_hook`, `async_post_call_success_hook`) -- these worked
+  as documented on 1.99.1.
+- **Confirmed (not just documented):** the `guardrail:` dotted path in
+  `litellm/config.yaml` must point at the guardrail **class**, not an
+  instance -- LiteLLM's loader (`guardrail_registry.py`,
+  `initialize_custom_guardrail`) does
+  `_guardrail_class(guardrail_name=..., **kwargs)`, i.e. it calls whatever
+  you point it at as a constructor. Pointing it at a pre-made instance
+  (`guardrails.gates_keyword_guardrail.guardrail_gates_keyword`, as an
+  earlier version of this file did) crashes proxy startup with
+  `TypeError: 'GatesKeywordGuardrail' object is not callable` and the
+  container exits immediately -- which looks like "port 4000 isn't
+  listening at all" from the outside, not a config error. Use
+  `guardrails.gates_keyword_guardrail.GatesKeywordGuardrail` (the class).
 - The exact Gemini model string for your `GEMINI_API_KEY`'s source --
   `gemini/gemini-2.0-flash` assumes a Google AI Studio key; a Vertex AI
   service-account key would instead need a `vertex_ai/...` prefix.

@@ -11,7 +11,10 @@ being duplicated here.
 Mounted read-only into the litellm-proxy container at /app/gates_ai_common
 and /app/guardrails (see litellm/docker-compose.yml) and registered in
 litellm/config.yaml under guardrails[].litellm_params.guardrail as
-"guardrails.gates_keyword_guardrail.guardrail_gates_keyword".
+"guardrails.gates_keyword_guardrail.GatesKeywordGuardrail" -- LiteLLM's
+guardrail loader imports that dotted path and calls it as a constructor
+(guardrail_class(guardrail_name=..., **kwargs)), so it must point at the
+class itself, not a pre-made instance.
 
 NOTE: the CustomGuardrail hook method names/signatures below match the
 documented LiteLLM custom-guardrail interface as of this writing -- confirm
@@ -68,8 +71,3 @@ class GatesKeywordGuardrail(CustomGuardrail):
                 raise ValueError(f"Blocked by gates-keyword-guardrail: suspicious_output ({hint})")
 
         return response
-
-
-# LiteLLM's custom-guardrail loading imports this module-level instance by
-# dotted path (see litellm/config.yaml).
-guardrail_gates_keyword = GatesKeywordGuardrail(guardrail_name="gates-keyword-guardrail")

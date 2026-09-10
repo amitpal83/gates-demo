@@ -64,7 +64,10 @@ guardrails:
   # so the same governance logic now runs at the gateway instead.
   - guardrail_name: "gates-keyword-guardrail"
     litellm_params:
-      guardrail: guardrails.gates_keyword_guardrail.guardrail_gates_keyword
+      # LiteLLM's guardrail loader imports this dotted path and CALLS it as
+      # a constructor (guardrail_class(guardrail_name=..., **kwargs)) -- it
+      # must point at the class itself, not an instance.
+      guardrail: guardrails.gates_keyword_guardrail.GatesKeywordGuardrail
       mode: ["pre_call", "post_call"]
 
 general_settings:
