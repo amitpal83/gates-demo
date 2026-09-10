@@ -51,13 +51,33 @@ Verify: `docker --version && docker compose version`.
 
     cd litellm
     cp env.sample .env
+
+Generate real values for the two secrets this stack owns (don't leave the
+placeholders in `env.sample` as-is):
+
+    openssl rand -hex 24   # run once for LITELLM_MASTER_KEY
+    openssl rand -hex 24   # run again for POSTGRES_PASSWORD
+
     nano .env
 
-Fill in `OPENAI_API_KEY` (same one the app's root `.env` already uses),
-`GEMINI_API_KEY` (copy the value from the root `.env`'s `GOOGLE_API_KEY` --
-LiteLLM's `gemini/` provider reads this specific name), `LITELLM_MASTER_KEY`
-(any long random string), `POSTGRES_PASSWORD` (any string). Leave
-`LANGFUSE_*` blank to skip the gateway-side Langfuse trace.
+Fill in:
+- `OPENAI_API_KEY` -- same one the app's root `.env` already uses.
+- `GEMINI_API_KEY` -- copy the value from the root `.env`'s `GOOGLE_API_KEY`.
+  LiteLLM's `gemini/` provider reads this specific name, not `GOOGLE_API_KEY`.
+- `LITELLM_MASTER_KEY` -- one of the random strings above. Safe to change
+  later too: it's read fresh from the environment on every proxy startup
+  (`docker compose restart litellm-proxy` picks up a new value immediately,
+  no migration, and it won't invalidate virtual keys already created).
+- `POSTGRES_PASSWORD` -- the other random string. **Set this to its real
+  value now, before the first `docker compose up -d`.** Postgres only
+  applies this env var when it initializes its data volume on first start;
+  changing it afterwards leaves the old password baked into the volume and
+  LiteLLM's `DATABASE_URL` (which reads the new value) fails to
+  authenticate. Fixing that later means either `ALTER USER litellm WITH
+  PASSWORD '...'` inside the Postgres container, or wiping the
+  `litellm_pgdata` volume and losing spend/budget history -- cheaper to get
+  it right up front.
+- `LANGFUSE_*` -- optional, leave blank to skip the gateway-side Langfuse trace.
 
 ### 3. Start the stack
 
@@ -65,9 +85,52 @@ LiteLLM's `gemini/` provider reads this specific name), `LITELLM_MASTER_KEY`
     docker compose ps                     # all 4 services should show "Up"
     docker compose logs -f litellm-proxy   # watch it boot, Ctrl-C once it's serving
 
+Quick health check from the box itself:
+
+    curl http://localhost:4000/health/liveliness
+
+### Admin UI
+
+The proxy serves an admin UI at `/ui` for managing keys/models/spend
+visually instead of via `curl`. Log in with:
+- Username: `admin`
+- Password: your `LITELLM_MASTER_KEY` value
+
+(Override with `UI_USERNAME`/`UI_PASSWORD` env vars if you'd rather not use
+the master key as a login password.) If `/ui` 404s, it's a known rough edge
+with certain LiteLLM image builds/tags -- the UI is optional for this demo;
+everything in the demo script below works via `curl` and the Streamlit
+page's own gateway-status panel regardless.
+
+#### Exposing the UI to the internet (POC only)
+
+`docker-compose.yml` currently binds `litellm-proxy`'s port 4000 to all
+interfaces (`"4000:4000"`, not `127.0.0.1:4000:4000`), and this section
+assumes that's what you want -- browse straight to
+`http://<ec2-public-ip>:4000/ui` with no SSH tunnel. This is **not
+hardened**: the login is your master key sent over plain HTTP with no IP
+restriction. Fine for a throwaway exploration box; don't leave it running
+this way, and don't reuse this master key anywhere else once you tear the
+instance down.
+
+To make that reachable, open the port in the EC2 security group:
+
+    aws ec2 authorize-security-group-ingress \
+      --group-id <your-sg-id> \
+      --protocol tcp --port 4000 --cidr 0.0.0.0/0
+
+(or via the Console: EC2 -> Security Groups -> your instance's SG -> Edit
+inbound rules -> Add rule -> Custom TCP, port 4000, source `0.0.0.0/0`.)
+
+If you'd rather not hunt for a hardened setup later, the two changes that
+matter most whenever you do want to tighten this back up are: rebind the
+port to `127.0.0.1:4000:4000` in `docker-compose.yml`, and restrict the
+security-group rule's source to your own IP instead of `0.0.0.0/0`.
+
 ### 4. Create a virtual key
 
-Run from the same box (port 4000 is bound to `127.0.0.1` only):
+Easiest run from the same box, so `localhost` always resolves regardless of
+how port 4000 is currently bound:
 
     source .env   # so $LITELLM_MASTER_KEY is set in this shell
     curl -X POST http://localhost:4000/key/generate \
@@ -160,6 +223,15 @@ as `agents/sql_agent.py` already does today with its configured
 `OPENAI_API_KEY`. The demo script below assumes the real stack is up.
 
 ## Notes / things to verify against your installed LiteLLM image
+
+- The image is pinned to `ghcr.io/berriai/litellm:1.99.1` in
+  `docker-compose.yml` -- deliberately not `:main-stable` or `:latest`.
+  LiteLLM discourages those rolling tags in production (a compromised CI
+  dependency shipped tainted images under them in 2026), and `main-stable`
+  specifically was slated to stop being published around September 2026.
+  Bump the pinned version deliberately from
+  [the releases page](https://github.com/BerriAI/litellm/releases) rather
+  than switching back to a rolling tag.
 
 LiteLLM's proxy config surface and plugin interfaces evolve between
 releases; these were written against the documented interface at the time

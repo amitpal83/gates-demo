@@ -6,19 +6,30 @@
 #
 # See litellm/README.md for the full setup + demo script.
 #
-# All ports are bound to 127.0.0.1 only. On a laptop that's invisible either
-# way; on a cloud VM with a public IP it matters a lot -- Postgres/Redis/
-# Presidio have no auth of their own, so binding them to loopback means a
-# misconfigured security group can't expose them to the internet. The app
-# (Streamlit/agents, running outside Docker via the existing venv) reaches
-# the proxy at http://localhost:4000 whether it's on your laptop or on the
-# same EC2 box.
+# Postgres/Redis/Presidio are bound to 127.0.0.1 -- they have no auth of
+# their own, nothing needs them reachable from outside the box (the proxy
+# talks to them over the internal Docker network regardless of host port
+# bindings), so there's no upside to opening them.
+#
+# litellm-proxy itself (port 4000) IS bound to all interfaces / exposed to
+# the internet -- a deliberate, unhardened choice for POC/exploration only.
+# Its login is your LITELLM_MASTER_KEY over plain HTTP with no IP
+# restriction; do not do this for anything beyond a throwaway demo. See
+# litellm/README.md "Exposing the UI to the internet (POC only)".
+#
+# Pinned to an explicit, immutable version -- NOT :main-stable or :latest.
+# LiteLLM discourages those rolling tags in production (a compromised CI
+# dependency shipped tainted images under them earlier in 2026), and
+# main-stable specifically was slated to stop being published around
+# September 2026, so it may now be stale or gone. Bump this deliberately
+# when you want a newer version rather than picking it up silently:
+# https://github.com/BerriAI/litellm/releases
 
 services:
   litellm-proxy:
-    image: ghcr.io/berriai/litellm:main-stable
+    image: ghcr.io/berriai/litellm:1.99.1
     ports:
-      - "127.0.0.1:4000:4000"
+      - "4000:4000"
     volumes:
       - ./config.yaml:/app/config.yaml:ro
       - ./guardrails:/app/guardrails:ro
