@@ -133,7 +133,7 @@ resource "aws_instance" "rag_ingestion" {
   })
 
   tags = {
-    Name = "rag-ingestion"
+    Name = "gates-ai-server"
   }
 }
 
