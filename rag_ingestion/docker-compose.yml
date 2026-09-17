@@ -49,6 +49,13 @@
 # in a different way (that tag can be pulled/rotated). `mc` only runs once at
 # startup to configure the bucket/webhook and isn't a long-running service, so
 # the blast radius of it drifting is small; if that changes, pin it too.
+#
+# Registry note: both MinIO images are pulled from quay.io, not Docker Hub --
+# Docker Hub's minio/minio and minio/mc repos now deny anonymous pulls
+# ("repository does not exist or may require 'docker login'", confirmed
+# 2026-09), a distribution change MinIO made after this file was first
+# written. quay.io/minio/minio and quay.io/minio/mc still serve the same
+# images/tags without authentication.
 
 x-airflow-common: &airflow-common
   build:
@@ -90,7 +97,7 @@ x-airflow-common: &airflow-common
 
 services:
   minio:
-    image: minio/minio:RELEASE.2024-11-07T00-52-20Z   # pinned, not :latest -- see header comment
+    image: quay.io/minio/minio:RELEASE.2024-11-07T00-52-20Z   # pinned, not :latest -- see header comment. Pulled from quay.io, not Docker Hub -- MinIO restricted anonymous Docker Hub pulls for minio/minio; quay.io still serves it.
     command: server /data --console-address ":9001"
     ports:
       # Deliberately exposed publicly per explicit request, so PDFs can be
@@ -113,7 +120,7 @@ services:
       start_period: 10s
 
   minio-init:
-    image: minio/mc:latest   # deliberate exception to pinning -- see header comment
+    image: quay.io/minio/mc:latest   # deliberate exception to pinning -- see header comment. Pulled from quay.io -- Docker Hub's minio/mc now denies anonymous pulls.
     depends_on:
       minio:
         condition: service_healthy
