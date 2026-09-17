@@ -89,6 +89,41 @@ class ResponseEvaluator:
             return self._evaluate_live_case(case)
         return self._evaluate_fallback_case(case)
 
+    def evaluate_chunk_quality(self, chunks: list[str]) -> EvaluationResult:
+        """Heuristic ingestion-time quality gate for document chunks.
+
+        Not a DeepEval metric -- there is no query/answer yet at ingestion
+        time -- so this always runs the same heuristic regardless of
+        self.backend and labels itself distinctly in the result.
+        """
+        if not chunks:
+            return EvaluationResult(0.0, False, "chunk-quality-heuristic", {"note": "no chunks produced"})
+
+        stripped = [c.strip() for c in chunks]
+        empty_or_short = sum(1 for c in stripped if len(c) < 20)
+        empty_ratio = empty_or_short / len(stripped)
+
+        seen = set()
+        duplicates = 0
+        for c in stripped:
+            if c in seen:
+                duplicates += 1
+            else:
+                seen.add(c)
+        duplicate_ratio = duplicates / len(stripped)
+
+        avg_chunk_length = sum(len(c) for c in stripped) / len(stripped)
+
+        score = 1.0 - max(empty_ratio, duplicate_ratio)
+        passed = score >= self.threshold
+        details = {
+            "empty_or_short_ratio": round(empty_ratio, 2),
+            "duplicate_ratio": round(duplicate_ratio, 2),
+            "avg_chunk_length": round(avg_chunk_length, 2),
+            "chunk_count": len(chunks),
+        }
+        return EvaluationResult(score, passed, "chunk-quality-heuristic", details)
+
     # -- production path (requires: pip install deepeval) ----------------
     def _evaluate_live_case(self, case: MinimalLLMTestCase):
         deepeval_case = case.to_deepeval_case()

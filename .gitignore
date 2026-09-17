@@ -12,3 +12,10 @@ htmlcov/
 build/
 dist/
 *.egg-info/
+
+# Terraform state/artifacts (deploy/rag_ingestion_aws)
+deploy/rag_ingestion_aws/.terraform/
+deploy/rag_ingestion_aws/terraform.tfstate
+deploy/rag_ingestion_aws/terraform.tfstate.backup
+deploy/rag_ingestion_aws/*.tfvars
+!deploy/rag_ingestion_aws/terraform.tfvars.example

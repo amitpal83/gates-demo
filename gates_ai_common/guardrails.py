@@ -155,6 +155,37 @@ class SecurityGuardrail:
             "topic-check"
         )
 
+    def check_document_safety(self, document_text: str) -> GuardrailResult:
+        """Scan a full ingested document for unsafe content before indexing."""
+        if self.backend == "nemo-guardrails" and self._rails is not None:
+            return self._check_document_safety_live(document_text)
+        return self._check_document_safety_fallback(document_text)
+
+    # -- production path (requires: pip install nemoguardrails + a
+    #    rails config directory with config.yml / flows.co) -------------
+    def _check_document_safety_live(self, document_text: str) -> GuardrailResult:
+        try:
+            result = self._rails.generate(
+                messages=[{"role": "user", "content": document_text[:4000]}]
+            )
+        except Exception:
+            return self._check_document_safety_fallback(document_text)
+
+        if "CONTENT_UNSAFE" in str(result).upper():
+            return GuardrailResult(False, "unsafe_document_content_detected", "nemo-guardrails")
+        return GuardrailResult(True, None, "nemo-guardrails")
+
+    # -- offline fallback path -------------------------------------------
+    def _check_document_safety_fallback(self, document_text: str) -> GuardrailResult:
+        lower = document_text.lower()
+        for pattern in _UNSAFE_OUTPUT_PATTERNS:
+            if re.search(pattern, document_text, re.IGNORECASE):
+                return GuardrailResult(False, "unsafe_document_content_detected", "keyword-fallback")
+        for hint in _SUSPICIOUS_OUTPUT_HINTS:
+            if hint in lower:
+                return GuardrailResult(False, "unsafe_document_content_detected", "keyword-fallback")
+        return GuardrailResult(True, None, "keyword-fallback")
+
     def check(self, response_text: str) -> GuardrailResult:
         if self.backend == "nemo-guardrails" and self._rails is not None:
             return self._check_live(response_text)

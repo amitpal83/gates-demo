@@ -8,10 +8,13 @@ nemoguardrails
 deepeval
 langfuse
 openai
-qdrant-client
+qdrant-client>=1.10.0
 pypdf
 sentence-transformers
 numpy
 reportlab
 python-dotenv
 streamlit
+llama-index-core
+llama-index-vector-stores-qdrant
+llama-index-embeddings-openai

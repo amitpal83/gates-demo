@@ -1,0 +1,26 @@
+# Streamlit UI image for the root gates_ai_lld app (streamlit_app.py +
+# pages/), used by the AWS deployment (deploy/rag_ingestion_aws) to serve
+# the app over Docker -- an EC2 box has no pre-existing venv, so this is
+# what actually backs deploy/rag_ingestion_aws's `streamlit_url` output
+# and the security group's port 8501 rule.
+#
+# For LOCAL/dev use, rag_ingestion/README.md's workflow of running
+# `streamlit run streamlit_app.py` directly in the host venv still works
+# and doesn't need this image at all -- both routes read from the same
+# Qdrant instance.
+#
+# Build context is the REPO ROOT, not rag_ingestion/ (see
+# docker-compose.yml's `streamlit` service: `context: ..`), because this
+# installs the root requirements.txt (streamlit, langchain, llama-index,
+# etc.), not rag_ingestion's own requirements.txt.
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt
+
+COPY . /app
+
+EXPOSE 8501
+CMD ["streamlit", "run", "streamlit_app.py", "--server.address=0.0.0.0", "--server.port=8501"]

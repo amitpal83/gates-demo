@@ -1,0 +1,15 @@
+apache-airflow==2.10.5
+llama-parse
+llama-index-core
+llama-index-vector-stores-qdrant
+llama-index-embeddings-openai
+llama-index-embeddings-huggingface
+sentence-transformers
+minio
+qdrant-client>=1.10.0
+openai
+fastapi
+uvicorn[standard]
+httpx
+pypdf
+python-dotenv

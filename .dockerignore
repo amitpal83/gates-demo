@@ -1,0 +1,23 @@
+# Keeps the `streamlit` image build (rag_ingestion/docker/Dockerfile.streamlit,
+# context: repo root) fast and small. rag_ingestion/'s own image
+# (docker/Dockerfile.airflow) doesn't COPY app code at all -- see that
+# Dockerfile and docker-compose.yml's header comment -- so this file only
+# needs to matter for the streamlit build.
+.git/
+venv/
+venv313/
+.venv*/
+__pycache__/
+**/__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.deepeval/
+docs/
+deploy/rag_ingestion_aws/.terraform/
+deploy/rag_ingestion_aws/terraform.tfstate*
+rag_ingestion/docker/
+.env
+gates_ai_common/observability.log

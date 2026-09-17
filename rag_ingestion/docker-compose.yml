@@ -1,0 +1,231 @@
+# Local stack for the RAG PDF ingestion pipeline (rag_ingestion/).
+#
+# Fully additive to gates_ai_lld: this does not touch litellm/docker-compose.yml,
+# agents/, streamlit_app.py, or the existing lines in the root requirements.txt.
+# Bring it up with:
+#     docker compose -f rag_ingestion/docker-compose.yml up -d
+#
+# See rag_ingestion/README.md for full setup instructions and the demo script.
+#
+# Volume/mount layout: rather than baking rag_ingestion/, gates_ai_common/,
+# and guardrails_config/ into the image (which would need a rebuild on every
+# code change), the whole repo root is bind-mounted read-only into every
+# Airflow/webhook container at /opt/rag_ingestion_root, and PYTHONPATH below
+# points at it -- so `import rag_ingestion...` and `import gates_ai_common...`
+# resolve the same way they do outside Docker. Airflow's own DAG folder is a
+# separate, additional mount (see AIRFLOW__CORE__DAGS_FOLDER's default,
+# /opt/airflow/dags) so the scheduler/webserver pick up rag_ingestion's DAG
+# file without needing DAGS_FOLDER repointed at the read-only repo mount.
+#
+# Ports, pinning, and exposure choices:
+#   - minio (9000 API / 9001 console) is bound to ALL interfaces, not just
+#     127.0.0.1. Deliberately exposed publicly per explicit request, so PDFs
+#     can be uploaded via the MinIO console/API from anywhere -- POC/
+#     exploration only, same spirit as litellm-proxy's port 4000 exposure in
+#     litellm/docker-compose.yml. A strong MINIO_ROOT_PASSWORD is essential
+#     since this port is reachable from the internet.
+#   - qdrant (6333/6334) is bound to 127.0.0.1 only -- no external consumer;
+#     the DAG/webserver/query-engine reach it over the compose network, or,
+#     for the Streamlit app running outside Docker on the same host, via
+#     localhost.
+#   - airflow-postgres (5433, mapped from the container's 5432) is bound to
+#     127.0.0.1 only, and uses a different host port from litellm's Postgres
+#     (5432) so both stacks can run on one box without clashing.
+#   - airflow-webserver (8080) is bound to all interfaces so the Airflow UI
+#     is reachable the same way the README describes for MinIO/console demos;
+#     it sits behind Airflow's own login (AIRFLOW_API_USERNAME/PASSWORD).
+#   - rag-webhook has no host port binding at all (`expose` only) -- it's
+#     purely an internal target for MinIO's event notifications over the
+#     compose network at http://rag-webhook:8090, never called from the host.
+#
+# Image pinning: every image below uses an explicit, immutable tag --
+# minio/minio, qdrant/qdrant, postgres, and the apache/airflow base image in
+# docker/Dockerfile.airflow -- NOT :latest, for the same reason
+# litellm/docker-compose.yml avoids rolling tags (a pin you bump on purpose
+# beats one that silently drifts). The one deliberate exception is
+# minio/mc:latest for the one-shot `minio-init` bootstrap job: MinIO does not
+# publish stable version tags for the `mc` client the way it does for the
+# server image, so pinning it to a specific date-stamped release is brittle
+# in a different way (that tag can be pulled/rotated). `mc` only runs once at
+# startup to configure the bucket/webhook and isn't a long-running service, so
+# the blast radius of it drifting is small; if that changes, pin it too.
+
+x-airflow-common: &airflow-common
+  build:
+    context: .
+    dockerfile: docker/Dockerfile.airflow
+  environment:
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:${AIRFLOW_POSTGRES_PASSWORD}@airflow-postgres/airflow
+    AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY}
+    AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW_WEBSERVER_SECRET_KEY}
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "False"
+    AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+    MINIO_ENDPOINT: minio:9000
+    MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+    MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    MINIO_BUCKET: ${MINIO_BUCKET}
+    MINIO_SECURE: "false"
+    QDRANT_URL: http://qdrant:6333
+    QDRANT_COLLECTION: gates_rag_docs
+    QDRANT_COLLECTION_DEV: gates_rag_docs_dev384
+    OPENAI_API_KEY: ${OPENAI_API_KEY}
+    EMBEDDING_MODEL: text-embedding-3-large
+    EMBEDDING_DIMENSIONS: "1024"
+    LLAMA_CLOUD_API_KEY: ${LLAMA_CLOUD_API_KEY}
+    AIRFLOW_API_URL: http://airflow-webserver:8080
+    AIRFLOW_API_USERNAME: ${AIRFLOW_API_USERNAME}
+    AIRFLOW_API_PASSWORD: ${AIRFLOW_API_PASSWORD}
+    AIRFLOW_DAG_ID: rag_pdf_ingestion
+    RAG_WEBHOOK_PORT: "8090"
+    RAG_WEBHOOK_SHARED_SECRET: ${RAG_WEBHOOK_SHARED_SECRET}
+    GATES_ENV: ${GATES_ENV:-development}
+    LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY}
+    LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY}
+    LANGFUSE_HOST: ${LANGFUSE_HOST:-https://cloud.langfuse.com}
+    PYTHONPATH: /opt/rag_ingestion_root
+  volumes:
+    - ..:/opt/rag_ingestion_root:ro
+    - ./dags:/opt/airflow/dags:ro
+
+services:
+  minio:
+    image: minio/minio:RELEASE.2024-11-07T00-52-20Z   # pinned, not :latest -- see header comment
+    command: server /data --console-address ":9001"
+    ports:
+      # Deliberately exposed publicly per explicit request, so PDFs can be
+      # uploaded via the MinIO console/API from anywhere -- POC/exploration
+      # only, same spirit as litellm-proxy's port 4000 exposure. A strong
+      # MINIO_ROOT_PASSWORD is essential since this port is reachable from
+      # the internet.
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  minio-init:
+    image: minio/mc:latest   # deliberate exception to pinning -- see header comment
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_BUCKET: ${MINIO_BUCKET}
+      RAG_WEBHOOK_SHARED_SECRET: ${RAG_WEBHOOK_SHARED_SECRET}
+    entrypoint: ["/bin/sh", "-c"]
+    # Best-effort bootstrap: creates the alias, bucket, and incoming/ prefix,
+    # then wires a webhook notification target so MinIO calls rag-webhook on
+    # every .pdf landing under incoming/. The exact `mc` subcommand names and
+    # flags below (`mc admin config set ... notify_webhook:...`, `mc admin
+    # service restart`, `mc event add ... --event put`) should be
+    # spot-checked against whatever MinIO/mc version this pulls -- this CLI
+    # surface has shifted between releases. See README's "Known limitations"
+    # section.
+    command:
+      - >
+        until mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD"; do
+          echo "waiting for minio...";
+          sleep 2;
+        done &&
+        mc mb --ignore-existing local/$$MINIO_BUCKET &&
+        mc cp /dev/null local/$$MINIO_BUCKET/incoming/.keep &&
+        mc admin config set local notify_webhook:ragwebhook endpoint="http://rag-webhook:8090/minio-event" auth_token="$$RAG_WEBHOOK_SHARED_SECRET" &&
+        mc admin service restart local &&
+        sleep 5 &&
+        mc event add local/$$MINIO_BUCKET arn:minio:sqs::ragwebhook:webhook --prefix incoming/ --suffix .pdf --event put || true
+
+  qdrant:
+    image: qdrant/qdrant:v1.12.1
+    ports:
+      # No external consumer; the DAG/webserver/query-engine reach it over
+      # the compose network or, for the Streamlit app running outside Docker
+      # on the same host, via localhost.
+      - "127.0.0.1:6333:6333"
+      - "127.0.0.1:6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+  airflow-postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: airflow
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: ${AIRFLOW_POSTGRES_PASSWORD}
+    volumes:
+      - airflow_pgdata:/var/lib/postgresql/data
+    ports:
+      # Separate port from litellm's Postgres (5432) so both stacks can run
+      # on one box without clashing.
+      - "127.0.0.1:5433:5432"
+
+  airflow-init:
+    <<: *airflow-common
+    depends_on:
+      - airflow-postgres
+    command: >
+      bash -c "airflow db migrate &&
+      airflow users create --username $$AIRFLOW_API_USERNAME --password $$AIRFLOW_API_PASSWORD --firstname Admin --lastname User --role Admin --email admin@example.com || true"
+
+  airflow-webserver:
+    <<: *airflow-common
+    depends_on:
+      - airflow-init
+    ports:
+      - "8080:8080"
+    command: webserver
+
+  airflow-scheduler:
+    <<: *airflow-common
+    depends_on:
+      - airflow-init
+    command: scheduler
+
+  rag-webhook:
+    <<: *airflow-common
+    depends_on:
+      - minio
+    expose:
+      - "8090"
+    command: uvicorn rag_ingestion.webhook.app:app --host 0.0.0.0 --port 8090
+
+  # Serves the root app (streamlit_app.py + pages/, including the
+  # "LlamaIndex RAG" query page) over Docker -- this is what actually backs
+  # the AWS deployment's public Streamlit UI (deploy/rag_ingestion_aws
+  # opens port 8501 and its `streamlit_url` output points here). Optional
+  # for local/dev use: rag_ingestion/README.md's workflow of running
+  # `streamlit run streamlit_app.py` directly in the host venv instead of
+  # via Docker still works against the same Qdrant instance.
+  streamlit:
+    build:
+      context: ..
+      dockerfile: rag_ingestion/docker/Dockerfile.streamlit
+    ports:
+      - "8501:8501"
+    environment:
+      QDRANT_URL: http://qdrant:6333
+      QDRANT_COLLECTION: gates_rag_docs
+      QDRANT_COLLECTION_DEV: gates_rag_docs_dev384
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      EMBEDDING_MODEL: text-embedding-3-large
+      EMBEDDING_DIMENSIONS: "1024"
+      LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY}
+      LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY}
+      LANGFUSE_HOST: ${LANGFUSE_HOST:-https://cloud.langfuse.com}
+      GATES_ENV: ${GATES_ENV:-development}
+    depends_on:
+      - qdrant
+
+volumes:
+  minio_data:
+  qdrant_data:
+  airflow_pgdata:

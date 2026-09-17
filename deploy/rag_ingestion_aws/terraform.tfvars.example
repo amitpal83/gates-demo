@@ -1,0 +1,50 @@
+# Copy this file to terraform.tfvars and fill in real values.
+# terraform.tfvars is gitignored -- never commit it (it holds live secrets).
+
+aws_region = "us-east-1"
+
+# Cost/sizing knob -- see the comment on `instance_type` in variables.tf.
+# t3.xlarge (default) for real headroom; t3.large as a cheaper fallback.
+instance_type = "t3.xlarge"
+
+root_volume_size_gb = 30
+data_volume_size_gb = 100
+
+# Name of an EXISTING EC2 key pair (EC2 -> Key Pairs in the console, or
+# `aws ec2 describe-key-pairs`). Terraform does not create key material.
+key_pair_name = "my-existing-keypair"
+
+# Keep these as narrow as practical -- e.g. your own IP as a /32.
+ssh_allowed_cidr = ["203.0.113.10/32"]
+ui_allowed_cidr  = ["203.0.113.10/32"]
+
+# Defaults to this project's own origin remote; override if deploying from
+# a fork.
+repo_url = "https://github.com/amitpal83/gates-demo.git"
+repo_ref = "main"
+
+# --- External accounts ---
+openai_api_key      = "sk-..."                     # same key the rest of gates_ai_lld uses
+llama_cloud_api_key = "llx-..."                    # from https://cloud.llamaindex.ai
+langfuse_public_key = ""                            # optional -- leave blank to skip Langfuse
+langfuse_secret_key = ""                            # optional -- leave blank to skip Langfuse
+
+# --- Generated secrets ---
+# MinIO's API (9000) and console (9001) are deliberately exposed to the
+# internet (see main.tf), so minio_root_password especially MUST be strong.
+minio_root_user     = "minioadmin"
+minio_root_password = "REPLACE_ME"                  # openssl rand -hex 24
+
+airflow_postgres_password = "REPLACE_ME"            # openssl rand -hex 24
+
+airflow_api_username = "admin"
+airflow_api_password = "REPLACE_ME"                 # openssl rand -hex 24
+
+# Airflow requires a REAL Fernet key here -- a random hex string will NOT
+# work. Generate with:
+#   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+airflow_fernet_key = "REPLACE_ME"
+
+airflow_webserver_secret_key = "REPLACE_ME"         # openssl rand -hex 24
+
+rag_webhook_shared_secret = "REPLACE_ME"            # openssl rand -hex 24

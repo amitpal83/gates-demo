@@ -54,12 +54,21 @@ def trace(name: str):
     return decorator
 
 
-def log_usage(agent_path: str, input_tokens: int, output_tokens: int, model: str) -> dict:
+def log_usage(
+    agent_path: str,
+    input_tokens: int,
+    output_tokens: int,
+    model: str,
+    price_per_1k_input: float | None = None,
+    price_per_1k_output: float | None = None,
+) -> dict:
     """Records tokens + estimated cost -- the 'Tokens & Cost' /
     'Pricing & Cost' observability sub-items in the HLD."""
+    input_price = price_per_1k_input if price_per_1k_input is not None else _PRICE_PER_1K_INPUT_USD
+    output_price = price_per_1k_output if price_per_1k_output is not None else _PRICE_PER_1K_OUTPUT_USD
     cost = round(
-        (input_tokens / 1000) * _PRICE_PER_1K_INPUT_USD
-        + (output_tokens / 1000) * _PRICE_PER_1K_OUTPUT_USD,
+        (input_tokens / 1000) * input_price
+        + (output_tokens / 1000) * output_price,
         6,
     )
     record = {

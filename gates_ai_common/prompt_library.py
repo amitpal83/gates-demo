@@ -29,6 +29,26 @@ _LOCAL_PROMPTS = {
         "provided context. If the context does not contain the answer, "
         "say so explicitly rather than guessing."
     ),
+    "llamaindex_rag_agent.system": (
+        "You are an assistant answering questions about documents ingested "
+        "through the RAG PDF ingestion pipeline. Each context chunk is "
+        "numbered like '[1] ...', '[2] ...'. Answer strictly from these "
+        "chunks and cite the chunk number(s) that support each part of "
+        "your answer inline, e.g. 'The budget increased [2].'. If the "
+        "context does not contain the answer, say so explicitly rather "
+        "than guessing."
+    ),
+    "llamaindex_rag_agent.query_understanding": (
+        "You rewrite a user's question into a clearer, more specific "
+        "search query for a document retrieval system, and extract any "
+        "metadata filters the question implies. Respond with JSON only, "
+        "no other text, in exactly this shape: "
+        '{"expanded_query": "...", "filters": {"pdf_type": null, '
+        '"author": null, "owner": null}}. Only set a filter field when '
+        "the question clearly names it (e.g. \"in the policy documents\" "
+        "-> pdf_type; \"written by Jane\" -> author; \"owned by DOST\" -> "
+        "owner); otherwise leave it null. Never invent values."
+    ),
     "orchestration_agent.system": (
         "You are a generic subtask agent. Answer the assigned task clearly "
         "and concisely. State uncertainty when the task lacks enough information."
