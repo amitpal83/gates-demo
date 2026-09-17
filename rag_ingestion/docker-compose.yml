@@ -186,7 +186,12 @@ services:
   airflow-webserver:
     <<: *airflow-common
     depends_on:
-      - airflow-init
+      # service_started (the bare list form's default) only waits for
+      # airflow-init's container to start, not for its `airflow db
+      # migrate` to actually finish -- that race let the webserver come
+      # up against an uninitialized DB. Wait for it to exit successfully.
+      airflow-init:
+        condition: service_completed_successfully
     ports:
       - "8080:8080"
     command: webserver
@@ -194,13 +199,20 @@ services:
   airflow-scheduler:
     <<: *airflow-common
     depends_on:
-      - airflow-init
+      airflow-init:
+        condition: service_completed_successfully
     command: scheduler
 
   rag-webhook:
     <<: *airflow-common
     depends_on:
       - minio
+    # The apache/airflow image's default entrypoint (/entrypoint) treats
+    # any command it doesn't recognize as an Airflow subcommand and runs
+    # `airflow <command>` -- it tried `airflow uvicorn ...` and failed.
+    # Override it to run `command` directly (still under dumb-init as
+    # PID 1 for correct signal handling).
+    entrypoint: ["/usr/bin/dumb-init", "--"]
     expose:
       - "8090"
     command: uvicorn rag_ingestion.webhook.app:app --host 0.0.0.0 --port 8090
