@@ -18,7 +18,16 @@ except ModuleNotFoundError:  # pragma: no cover - optional dependency in some en
         return False
 
 
-load_dotenv()
+try:
+    load_dotenv()
+except OSError:
+    # Best-effort convenience for local dev -- in any deployed environment
+    # (this AWS box included) config comes from the environment itself
+    # (see docker-compose.yml's `environment:` blocks), not a .env file on
+    # disk. A .env that exists but isn't readable by this container's user
+    # (e.g. root-written, chmod 600, read by a non-root container user)
+    # must not crash startup.
+    pass
 
 
 def _installed(module_name: str) -> bool:

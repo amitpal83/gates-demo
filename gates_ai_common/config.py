@@ -25,7 +25,15 @@ except ModuleNotFoundError:  # pragma: no cover - optional dependency in some en
         return False
 
 
-load_dotenv()
+try:
+    load_dotenv()
+except OSError:
+    # Best-effort convenience for local dev -- in a deployed environment
+    # config comes from the environment itself, not a .env file on disk.
+    # A .env that exists but isn't readable by this process's user (e.g.
+    # root-written, chmod 600, read by a non-root container user) must
+    # not crash startup.
+    pass
 
 try:
     import certifi
