@@ -64,6 +64,12 @@ x-airflow-common: &airflow-common
   environment:
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:${AIRFLOW_POSTGRES_PASSWORD}@airflow-postgres/airflow
+    # Airflow's REST API does NOT accept HTTP Basic Auth by default (2.x's
+    # default API auth backend rejects it with 401) -- rag-webhook
+    # authenticates with AIRFLOW_API_USERNAME/PASSWORD over basic auth, so
+    # that backend must be explicitly enabled. Confirmed necessary against
+    # a live 2.10.5 deployment (2026-09).
+    AIRFLOW__API__AUTH_BACKENDS: "airflow.api.auth.backend.basic_auth"
     AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY}
     AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW_WEBSERVER_SECRET_KEY}
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "False"
