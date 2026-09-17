@@ -145,7 +145,7 @@ services:
           sleep 2;
         done &&
         mc mb --ignore-existing local/$$MINIO_BUCKET &&
-        mc cp /dev/null local/$$MINIO_BUCKET/incoming/.keep &&
+        printf '' | mc pipe local/$$MINIO_BUCKET/incoming/.keep &&
         mc admin config set local notify_webhook:ragwebhook endpoint="http://rag-webhook:8090/minio-event" auth_token="$$RAG_WEBHOOK_SHARED_SECRET" &&
         mc admin service restart local &&
         sleep 5 &&
