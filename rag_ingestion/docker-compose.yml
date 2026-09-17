@@ -147,7 +147,7 @@ services:
         mc mb --ignore-existing local/$$MINIO_BUCKET &&
         printf '' | mc pipe local/$$MINIO_BUCKET/incoming/.keep &&
         mc admin config set local notify_webhook:ragwebhook endpoint="http://rag-webhook:8090/minio-event" auth_token="$$RAG_WEBHOOK_SHARED_SECRET" &&
-        mc admin service restart local &&
+        mc --json admin service restart local &&
         sleep 5 &&
         mc event add local/$$MINIO_BUCKET arn:minio:sqs::ragwebhook:webhook --prefix incoming/ --suffix .pdf --event put || true
 
