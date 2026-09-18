@@ -1,16 +1,4 @@
-"""
-gates_ai_common.llm_client
------------------------------
-Shared LLM call wrapper.
-
-Production backend : OpenAI chat completions (swap the base_url to
-                      route through LiteLLM for other model providers
-                      without changing this interface).
-Fallback backend    : a deterministic stub, injected by the caller,
-                      so the surrounding pipeline (validation, prompt
-                      library, evaluation, guardrails, observability)
-                      can be demonstrated end-to-end without a key.
-"""
+"""Shared LLM call wrapper: OpenAI chat completions in production (swap base_url to route through LiteLLM), a caller-injected deterministic stub otherwise."""
 from . import config
 
 if config.USE_LIVE_LLM:
@@ -39,8 +27,7 @@ class LLMClient:
             return resp.choices[0].message.content, usage
 
         text = self._mock_fn(system, user)
-        # Deterministic pseudo-token-count so the observability step has
-        # something real to log even in mock mode.
+        # Deterministic pseudo-token-count so observability has something real to log even in mock mode.
         usage = {
             "input_tokens": max(1, len((system + user).split())),
             "output_tokens": max(1, len(text.split())),

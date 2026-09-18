@@ -1,30 +1,4 @@
-"""
-agents.sql_agent
---------------------
-LLD worked example: a text-to-SQL agent for the "R&D Project Monitoring"
-dataset, built entirely on the gates_ai_common shared library and LangChain.
-
-Uses LangChain as the default framework for all scenarios:
-- Development mode (no API keys): Uses mock LLM backend
-- Production mode (with OPENAI_API_KEY): Uses live OpenAI backend
-
-Run it directly:
-
-    python3 -m agents.sql_agent "What is the total budget by region?"
-
-With no API keys / extra packages installed, every stage still runs
-using the fallback backends declared in gates_ai_common -- this is a
-genuine end-to-end execution, not a mock of the whole pipeline, only
-the external network calls (OpenAI, Langfuse, etc.) are stubbed.
-
-Switch to production mode:
-
-    export OPENAI_API_KEY=...
-
-The agent will automatically use the live OpenAI backend through LangChain.
-Nothing else needs to change -- gates_ai_common picks the live backend
-automatically (see gates_ai_common/config.py).
-"""
+"""LLD worked example: a text-to-SQL agent for the "R&D Project Monitoring" dataset, built on gates_ai_common and LangChain (mock LLM in dev, live OpenAI when OPENAI_API_KEY is set)."""
 import re
 import sqlite3
 import sys
@@ -145,9 +119,7 @@ SAMPLE_ROWS = [
 
 
 def build_demo_database() -> sqlite3.Connection:
-    """Creates and seeds an in-memory SQLite DB standing in for the
-    GATES lakehouse gold-layer table this agent would query in
-    production (via Trino, not sqlite3)."""
+    """Creates and seeds an in-memory SQLite DB standing in for the GATES lakehouse gold-layer table (queried via Trino in production)."""
     conn = sqlite3.connect(":memory:")
     conn.execute(SCHEMA_DDL)
     conn.executemany(
@@ -158,9 +130,7 @@ def build_demo_database() -> sqlite3.Connection:
 
 
 def mock_sql_writer(system: str, user: str) -> str:
-    """Stands in for the LLM's SQL-writing behaviour when no OpenAI key
-    is configured, using simple keyword matching so the demo produces
-    a real, executable query rather than a canned string."""
+    """Stands in for the LLM's SQL-writing behaviour when no OpenAI key is configured, using keyword matching to produce a real, executable query."""
     match = re.search(r"Question:\s*(.*)", user, re.IGNORECASE)
     q = (match.group(1) if match else user).lower()
     if "budget" in q and "region" in q:
@@ -173,17 +143,10 @@ def mock_sql_writer(system: str, user: str) -> str:
 
 
 class SQLAgent:
-    """The full pipeline using LangChain: validate -> prompt -> LLM writes SQL
-    (via LangChain agent) -> execute -> evaluate -> guardrail -> observe."""
+    """The full pipeline using LangChain: validate -> prompt -> LLM writes SQL (via LangChain agent) -> execute -> evaluate -> guardrail -> observe."""
 
     def __init__(self, db_conn: sqlite3.Connection | None = None, db_uri: str | None = None):
-        """
-        Args:
-            db_conn: SQLite connection for demo mode (in-memory)
-            db_uri: Database URI string (e.g., "sqlite:///path/db.sqlite")
-                   If provided, LangChain's SQLDatabase is used directly.
-                   Otherwise, db_conn is required.
-        """
+        """db_conn: in-memory demo connection; db_uri: DB URI string (e.g. "sqlite:///path/db.sqlite") -- one of the two is required."""
         if not LANGCHAIN_AVAILABLE:
             raise ImportError(
                 "LangChain is required. Install with: "
@@ -300,8 +263,7 @@ class SQLAgent:
             "..." if len(system_prompt) > 200 else ""
         )
 
-        # 3. LangChain agent execution (generates SQL and executes it)
-        # Create a callback to capture SQL executions
+        # 3. LangChain agent execution -- callback captures the generated SQL
         try:
             from langchain_core.callbacks import BaseCallbackHandler
             

@@ -1,14 +1,4 @@
-"""
-gates_ai_common.observability
----------------------------------
-Shared tracing + cost/token logging, applied identically to every
-agent so traffic from different agent paths (LangChain vs LangGraph,
-SQL agent vs RAG agent) can be compared later.
-
-Production backend : Langfuse (@observe decorator + langfuse_context).
-Fallback backend    : appends a JSON line per call to observability.log
-                       in this package's directory.
-"""
+"""Shared tracing + cost/token logging, applied identically to every agent: Langfuse in production, a local JSON-lines log as the fallback."""
 import functools
 import json
 import logging
@@ -29,12 +19,7 @@ _PRICE_PER_1K_OUTPUT_USD = 0.002
 
 
 def trace(name: str):
-    """Decorator: wraps a function call with a trace span.
-
-    Production: becomes @observe(name=name); Langfuse captures timing
-    and (when the LLM call inside is also wrapped) token usage
-    automatically. Fallback: writes an equivalent record locally.
-    """
+    """Decorator: wraps a function call with a trace span -- @observe(name=name) in production, an equivalent local record as the fallback."""
     def decorator(fn):
         if config.USE_LIVE_LANGFUSE:
             return observe(name=name)(fn)
@@ -62,8 +47,7 @@ def log_usage(
     price_per_1k_input: float | None = None,
     price_per_1k_output: float | None = None,
 ) -> dict:
-    """Records tokens + estimated cost -- the 'Tokens & Cost' /
-    'Pricing & Cost' observability sub-items in the HLD."""
+    """Records tokens + estimated cost -- the 'Tokens & Cost' observability sub-item in the HLD."""
     input_price = price_per_1k_input if price_per_1k_input is not None else _PRICE_PER_1K_INPUT_USD
     output_price = price_per_1k_output if price_per_1k_output is not None else _PRICE_PER_1K_OUTPUT_USD
     cost = round(

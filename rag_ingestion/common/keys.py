@@ -1,6 +1,4 @@
-"""Deterministic id/key helpers -- shared by the webhook, tasks, and DAG so
-a duplicate MinIO notification maps to the same dag_run_id instead of
-double-ingesting."""
+"""Deterministic id/key helpers -- shared by the webhook, tasks, and DAG so a duplicate MinIO notification maps to the same dag_run_id instead of double-ingesting."""
 import hashlib
 import uuid
 

@@ -1,25 +1,4 @@
-"""
-agents.rag_flow
--------------------
-Runnable demo of the HLD RAG Flow:
-
-    LangChain framework (prompt + generation chain)
-    -> Input validation (pass / fail)
-    -> Take a PDF -> chunk it
-    -> Embed chunks -> store embeddings
-    -> Search (cosine similarity, top-k) -> rerank
-    -> Build prompt chain -> ask the LLM
-    -> Evaluation (ok / not ok)
-    -> Security guardrail
-    -> Observability (tokens & cost)
-
-Run it directly (generates its own sample PDF on first run):
-
-    python3 -m agents.rag_flow "What GPU cluster does GATES use?"
-
-Production stack: pip install langchain qdrant-client openai
-sentence-transformers llm-guard nemoguardrails deepeval langfuse
-"""
+"""Runnable demo of the HLD RAG Flow: LangChain -> input validation -> chunk/embed/store a PDF -> search (cosine, top-k) -> rerank -> prompt/LLM -> evaluation -> security guardrail -> observability."""
 import os
 import re
 import sys
@@ -77,9 +56,7 @@ across both agent paths so the team can compare their operating profiles.
 
 
 def ensure_sample_pdf() -> str:
-    """Generates a tiny sample PDF the first time this runs, so the
-    'Taking a PDF' step has a real file to read -- not a hardcoded
-    string pretending to be one."""
+    """Generates a tiny sample PDF the first time this runs, so 'Taking a PDF' reads a real file."""
     if os.path.exists(SAMPLE_PDF_PATH):
         return SAMPLE_PDF_PATH
     from reportlab.lib.pagesizes import LETTER
@@ -104,10 +81,7 @@ def load_pdf_text(path: str) -> str:
 
 
 def chunk_text(text: str, chunk_size: int = 220, overlap: int = 40) -> list[str]:
-    """Step: Chunking the PDF. Fixed-size sliding window over
-    whitespace-normalized text -- production would likely use a
-    sentence/paragraph-aware splitter (e.g. langchain's
-    RecursiveCharacterTextSplitter), same idea, smarter boundaries."""
+    """Step: Chunking the PDF. Fixed-size sliding window over normalized text (production would use a sentence-aware splitter)."""
     normalized = re.sub(r"\s+", " ", text).strip()
     chunks = []
     start = 0
@@ -119,14 +93,7 @@ def chunk_text(text: str, chunk_size: int = 220, overlap: int = 40) -> list[str]
 
 
 def embed(text: str, dims: int = 64) -> np.ndarray:
-    """Step: turning text into (small) embeddings.
-
-    Stands in for a real embedding model (e.g. OpenAI
-    text-embedding-3-large, 1024-dim) using a deterministic hashed
-    bag-of-words vector -- offline, but genuinely responsive to word
-    overlap, which is enough to demonstrate real cosine-similarity
-    search and reranking behaviour.
-    """
+    """Step: turning text into (small) embeddings -- a deterministic hashed bag-of-words vector standing in for a real embedding model."""
     vec = np.zeros(dims)
     for word in re.findall(r"[a-z]{3,}", text.lower()):
         idx = hash(word) % dims
@@ -136,17 +103,7 @@ def embed(text: str, dims: int = 64) -> np.ndarray:
 
 
 class InMemoryVectorStore:
-    """Stands in for Qdrant. Same three operations a real Qdrant
-    client exposes: create collection (implicit here), upsert, search.
-
-    Production equivalent:
-        from qdrant_client import QdrantClient
-        from qdrant_client.models import VectorParams, Distance, PointStruct
-        client = QdrantClient(url="http://qdrant:6333")
-        client.create_collection("gates_docs", VectorParams(size=1024, distance=Distance.COSINE))
-        client.upsert("gates_docs", points=[PointStruct(id=i, vector=v, payload={"text": t})...])
-        client.search("gates_docs", query_vector=q, limit=top_k)
-    """
+    """Stands in for Qdrant -- same three operations a real client exposes: create collection (implicit here), upsert, search."""
 
     def __init__(self):
         self._vectors: list[np.ndarray] = []
@@ -164,9 +121,7 @@ class InMemoryVectorStore:
 
 
 def rerank(query: str, hits: list[tuple[str, float]]) -> list[tuple[str, float]]:
-    """Step: reranking. Stands in for a cross-encoder reranker
-    (e.g. sentence_transformers.CrossEncoder) with a cheap lexical
-    boost: chunks containing an exact query keyword move up."""
+    """Step: reranking. Stands in for a cross-encoder reranker with a cheap lexical boost for exact keyword matches."""
     query_words = set(re.findall(r"[a-z]{4,}", query.lower()))
 
     def boosted_score(item):
@@ -179,10 +134,7 @@ def rerank(query: str, hits: list[tuple[str, float]]) -> list[tuple[str, float]]
 
 
 def mock_rag_answer(system: str, user: str) -> str:
-    """Offline stand-in for the LLM: extracts the sentence from the
-    context most relevant to the question, so the answer is
-    genuinely grounded in what was retrieved (and evaluation can
-    meaningfully check that)."""
+    """Offline stand-in for the LLM: extracts the context sentence most relevant to the question, so the answer stays grounded."""
     context_match = re.search(r"Context:\n(.*?)\n\nQuestion:", user, re.DOTALL)
     context = context_match.group(1) if context_match else ""
     question = user.split("Question:")[-1].strip()

@@ -1,6 +1,4 @@
-"""The rag_pdf_ingestion DAG: wires tasks/*.py's run() functions together.
-Triggered only via REST by rag-webhook, using a deterministic dag_run_id
-(rag_ingestion.common.keys) so a duplicate MinIO event doesn't double-ingest."""
+"""The rag_pdf_ingestion DAG: wires tasks/*.py's run() functions together, triggered only via REST by rag-webhook with a deterministic dag_run_id so duplicate MinIO events don't double-ingest."""
 from __future__ import annotations
 
 import pendulum

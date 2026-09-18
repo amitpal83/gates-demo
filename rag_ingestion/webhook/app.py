@@ -1,6 +1,4 @@
-"""Turns a MinIO s3:ObjectCreated event into a rag_pdf_ingestion DAG run.
-Internal-only (never published to the host); auth checked against
-RAG_WEBHOOK_SHARED_SECRET as defense-in-depth."""
+"""Turns a MinIO s3:ObjectCreated event into a rag_pdf_ingestion DAG run; internal-only, with auth checked against RAG_WEBHOOK_SHARED_SECRET as defense-in-depth."""
 from __future__ import annotations
 
 import logging

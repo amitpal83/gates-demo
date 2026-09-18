@@ -1,29 +1,4 @@
-# Local LiteLLM Proxy stack for the SQL Agent (LiteLLM) demo.
-#
-# Fully additive to gates_ai_lld: nothing here is required by the existing
-# agents/streamlit_app.py. Bring it up with:
-#     docker compose -f litellm/docker-compose.yml up -d
-#
-# See litellm/README.md for the full setup + demo script.
-#
-# Postgres/Redis/Presidio are bound to 127.0.0.1 -- they have no auth of
-# their own, nothing needs them reachable from outside the box (the proxy
-# talks to them over the internal Docker network regardless of host port
-# bindings), so there's no upside to opening them.
-#
-# litellm-proxy itself (port 4000) IS bound to all interfaces / exposed to
-# the internet -- a deliberate, unhardened choice for POC/exploration only.
-# Its login is your LITELLM_MASTER_KEY over plain HTTP with no IP
-# restriction; do not do this for anything beyond a throwaway demo. See
-# litellm/README.md "Exposing the UI to the internet (POC only)".
-#
-# Pinned to an explicit, immutable version -- NOT :main-stable or :latest.
-# LiteLLM discourages those rolling tags in production (a compromised CI
-# dependency shipped tainted images under them earlier in 2026), and
-# main-stable specifically was slated to stop being published around
-# September 2026, so it may now be stale or gone. Bump this deliberately
-# when you want a newer version rather than picking it up silently:
-# https://github.com/BerriAI/litellm/releases
+# Local LiteLLM Proxy stack for the SQL Agent demo (see litellm/README.md) -- fully additive; Postgres/Redis/Presidio stay on 127.0.0.1, but litellm-proxy (port 4000) is deliberately exposed to all interfaces over plain HTTP with only LITELLM_MASTER_KEY auth for POC use, and its image is pinned to an explicit version (not :main-stable/:latest) since those rolling tags have shipped tainted images before.
 
 services:
   litellm-proxy:

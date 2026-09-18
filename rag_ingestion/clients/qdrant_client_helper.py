@@ -1,8 +1,4 @@
-"""Wraps qdrant_client.QdrantClient. Collections use two named vectors per
-point ("dense" + "sparse") so hybrid_search() can fuse both in one call --
-needs qdrant-client/server >= 1.10. A collection created before hybrid
-search existed (single unnamed vector) isn't compatible; drop and
-re-ingest."""
+"""Wraps qdrant_client.QdrantClient with two named vectors per point ("dense" + "sparse", needs qdrant-client/server >= 1.10) for hybrid_search()."""
 from __future__ import annotations
 
 import logging
@@ -118,9 +114,7 @@ def hybrid_search(
     candidate_limit: int = 20,
     query_filter: Filter | None = None,
 ) -> list[ScoredPoint]:
-    """One call: dense + sparse candidates fused via RRF, then cut to `limit`.
-    candidate_limit should stay above `limit` so a later rerank has enough
-    to work with."""
+    """One call: dense + sparse candidates fused via RRF, then cut to `limit` (keep candidate_limit above `limit` for reranking headroom)."""
     response = client.query_points(
         collection_name=collection_name,
         prefetch=[

@@ -1,6 +1,4 @@
-"""Embeds enriched chunks: OpenAI (1024-dim, batched) when live, else
-sentence-transformers (384-dim) locally. Also builds a sparse vector per
-chunk for hybrid retrieval (see load_qdrant.py, query_engine.py)."""
+"""Embeds enriched chunks: OpenAI (1024-dim, batched) when live, else sentence-transformers (384-dim) locally; also builds a sparse vector per chunk for hybrid retrieval."""
 from __future__ import annotations
 
 import json

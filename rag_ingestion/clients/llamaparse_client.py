@@ -1,5 +1,4 @@
-"""PDF -> markdown. LlamaParse when available and configured, else pypdf
-page-by-page text extraction."""
+"""PDF -> markdown. LlamaParse when available and configured, else pypdf page-by-page text extraction."""
 from __future__ import annotations
 
 import logging

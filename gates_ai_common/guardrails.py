@@ -1,19 +1,4 @@
-"""
-gates_ai_common.guardrails
-------------------------------
-Shared OUTPUT-side security guardrail: screens the model's response
-before it is returned to the caller. Distinct from input_validation.py,
-which screens what the user sent, not what the model produced.
-
-Production backend : NVIDIA NeMo Guardrails (topical + safety rails),
-                      or Llama Guard as a moderation model.
-Fallback backend    : explicit content-policy checks for PII / unsafe
-                      output generation, used when nemoguardrails isn't
-                      installed or not configured.
-
-This module is intentionally strict: the safety gate should fail on
-real unsafe output, not merely on a canned refusal sentence.
-"""
+"""Shared OUTPUT-side security guardrail (screens the model's response, unlike input_validation.py): NeMo Guardrails in production, explicit content-policy checks offline."""
 import logging
 import re
 
@@ -161,8 +146,7 @@ class SecurityGuardrail:
             return self._check_document_safety_live(document_text)
         return self._check_document_safety_fallback(document_text)
 
-    # -- production path (requires: pip install nemoguardrails + a
-    #    rails config directory with config.yml / flows.co) -------------
+    # -- production path (requires: pip install nemoguardrails + a rails config dir) --
     def _check_document_safety_live(self, document_text: str) -> GuardrailResult:
         try:
             result = self._rails.generate(
@@ -191,8 +175,7 @@ class SecurityGuardrail:
             return self._check_live(response_text)
         return self._check_fallback(response_text)
 
-    # -- production path (requires: pip install nemoguardrails + a
-    #    rails config directory with config.yml / flows.co) -------------
+    # -- production path (requires: pip install nemoguardrails + a rails config dir) --
     def _check_live(self, response_text: str) -> GuardrailResult:
         try:
             result = self._rails.generate(

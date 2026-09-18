@@ -1,5 +1,4 @@
-"""Splits parsed markdown into chunks: LlamaIndex's SentenceSplitter when
-available, else a fixed-window splitter with overlap."""
+"""Splits parsed markdown into chunks: LlamaIndex's SentenceSplitter when available, else a fixed-window splitter with overlap."""
 from __future__ import annotations
 
 import json

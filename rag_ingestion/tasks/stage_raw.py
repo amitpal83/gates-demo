@@ -1,8 +1,4 @@
-"""First pipeline task: computes doc_id and copies the uploaded object into
-this pipeline's own raw/<doc_id>/source.pdf key so later stages have a
-stable path even if the original upload moves. No Airflow import here (or
-in any other tasks/*.py) -- dags/rag_ingestion_dag.py wraps run() with
-@task and @trace."""
+"""First pipeline task: computes doc_id and copies the upload into raw/<doc_id>/source.pdf for a stable path; no Airflow import here (dags/rag_ingestion_dag.py wraps run() with @task and @trace)."""
 from __future__ import annotations
 
 from rag_ingestion.clients import minio_client

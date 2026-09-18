@@ -1,27 +1,4 @@
-"""
-agents.orchestration_flow
------------------------------
-Runnable demo of the HLD Orchestration Flow:
-
-    Router -> [LangChain simple | LangGraph multi-agent]
-           -> Input validation (pass / fail)
-           -> Prompt library
-           -> LLM call
-           -> Evaluation (ok / not ok, retry loop capped at 2)
-           -> Security guardrail
-           -> Observability (tokens & cost)
-
-Run it directly:
-
-    python3 -m agents.orchestration_flow "Summarize GATES in one sentence"
-    python3 -m agents.orchestration_flow "Summarize GATES and also list its four components"
-
-The second example has two sub-asks, which routes to the multi-agent
-path -- watch the printed trace change accordingly.
-
-Production stack: pip install langchain langgraph openai llm-guard
-nemoguardrails deepeval langfuse
-"""
+"""Runnable demo of the HLD Orchestration Flow: Router -> [LangChain simple | LangGraph multi-agent] -> Input validation -> Prompt library -> LLM call -> Evaluation (retry loop capped at 2) -> Security guardrail -> Observability."""
 import json
 import re
 import sys

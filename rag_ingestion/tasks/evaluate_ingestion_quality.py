@@ -1,5 +1,4 @@
-"""Best-effort final task: scores chunk quality for observability. Runs
-with trigger_rule=all_done so it still runs after an upstream failure."""
+"""Best-effort final task: scores chunk quality for observability, with trigger_rule=all_done so it still runs after an upstream failure."""
 from __future__ import annotations
 
 import json

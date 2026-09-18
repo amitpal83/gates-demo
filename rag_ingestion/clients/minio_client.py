@@ -1,5 +1,4 @@
-"""Thin wrapper around the `minio` SDK. No fallback -- MinIO is core infra
-here, so a missing/unreachable client raises instead of silently no-op-ing."""
+"""Thin wrapper around the `minio` SDK. No fallback -- MinIO is core infra here, so a missing/unreachable client raises instead of silently no-op-ing."""
 from __future__ import annotations
 
 import io

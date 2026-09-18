@@ -1,6 +1,4 @@
-"""Query-time RAG pipeline: understand query -> hybrid retrieve (dense+
-sparse, one Qdrant call) -> rerank+cite -> generate -> guardrail -> respond.
-Evaluation/cost logging run async, after the response is already sent."""
+"""Query-time RAG pipeline: understand query -> hybrid retrieve (dense+sparse) -> rerank+cite -> generate -> guardrail -> respond, with evaluation/cost logging run async after the response is sent."""
 from __future__ import annotations
 
 import json

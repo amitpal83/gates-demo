@@ -1,5 +1,4 @@
-"""Env-var switchboard for rag_ingestion. Names here are fixed contracts
-with docker-compose.yml, Terraform, and the DAG/webhook."""
+"""Env-var switchboard for rag_ingestion. Names here are fixed contracts with docker-compose.yml, Terraform, and the DAG/webhook."""
 import importlib
 import os
 

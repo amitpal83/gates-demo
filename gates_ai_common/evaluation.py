@@ -1,21 +1,4 @@
-"""
-gates_ai_common.evaluation
-------------------------------
-Shared response-quality gate, run after every generation.
-
-Production backend : DeepEval (FaithfulnessMetric, AnswerRelevancyMetric,
-                      HallucinationMetric).
-Fallback backend    : a lightweight grounding heuristic (word-overlap
-                      against the supplied context), used when
-                      deepeval / its judge model isn't available -- so
-                      the evaluation *gate* is still real and can still
-                      fail a bad answer, even offline.
-
-This module intentionally uses a very small evaluation record so the
-business logic stays easy to explain in demos. The full DeepEval class
-is much more general than this project needs, but we still convert to it
-when the live backend is used.
-"""
+"""Shared response-quality gate, run after every generation: DeepEval in production, a lightweight word-overlap grounding heuristic offline."""
 from dataclasses import dataclass
 from typing import Optional
 from . import config
@@ -28,17 +11,7 @@ if config.HAS_DEEPEVAL:
 
 @dataclass
 class MinimalLLMTestCase:
-    """A stripped-down, demo-friendly version of DeepEval's LLMTestCase.
-
-    This keeps only the fields this SQL workflow actually needs:
-    - the user input
-    - the generated SQL/output
-    - the grounding context
-    - the retrieval context
-
-    The full DeepEval class supports more features like MCP, tools, multimodal
-    inputs, metrics metadata, and dataset metadata, but they are not needed here.
-    """
+    """A stripped-down, demo-friendly version of DeepEval's LLMTestCase, keeping only the fields this SQL workflow actually needs."""
     input: str
     actual_output: str
     context: list[str]
@@ -90,12 +63,7 @@ class ResponseEvaluator:
         return self._evaluate_fallback_case(case)
 
     def evaluate_chunk_quality(self, chunks: list[str]) -> EvaluationResult:
-        """Heuristic ingestion-time quality gate for document chunks.
-
-        Not a DeepEval metric -- there is no query/answer yet at ingestion
-        time -- so this always runs the same heuristic regardless of
-        self.backend and labels itself distinctly in the result.
-        """
+        """Heuristic ingestion-time quality gate for document chunks -- not a DeepEval metric, since there's no query/answer yet."""
         if not chunks:
             return EvaluationResult(0.0, False, "chunk-quality-heuristic", {"note": "no chunks produced"})
 

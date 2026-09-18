@@ -1,5 +1,4 @@
-"""Reads the staged PDF from MinIO, parses to markdown via LlamaParse (or
-pypdf fallback), writes markdown + parse metadata back to MinIO."""
+"""Reads the staged PDF from MinIO, parses to markdown via LlamaParse (or pypdf fallback), writes markdown + parse metadata back to MinIO."""
 from __future__ import annotations
 
 from rag_ingestion.clients import llamaparse_client, minio_client

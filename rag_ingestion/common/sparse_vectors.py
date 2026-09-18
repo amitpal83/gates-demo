@@ -1,8 +1,4 @@
-"""BM25-style sparse vector builder, shared by ingestion and query time so
-both hash terms into the same index space. Raw term counts, not IDF-
-weighted -- Qdrant's Modifier.IDF on the collection computes real corpus
-IDF from these at query time. zlib.crc32 (not Python's hash()) because it's
-deterministic across processes."""
+"""BM25-style sparse vector builder shared by ingestion and query time, using raw term counts (Qdrant's Modifier.IDF weights them) and zlib.crc32 for cross-process determinism."""
 from __future__ import annotations
 
 import re

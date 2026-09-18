@@ -1,7 +1,4 @@
-"""Attaches document-level metadata to every chunk, then runs the PII
-(InputValidator) and content-safety (SecurityGuardrail) gates on the full
-joined text. A gate failure raises so the Airflow task fails visibly; the
-reason is also written to MinIO under failed/<doc_id>/ for auditing."""
+"""Attaches document-level metadata to every chunk, then runs the PII and content-safety gates on the joined text; a failure raises and is logged to MinIO under failed/<doc_id>/."""
 from __future__ import annotations
 
 import json

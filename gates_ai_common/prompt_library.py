@@ -1,17 +1,4 @@
-"""
-gates_ai_common.prompt_library
---------------------------------
-Shared, named, versioned prompt registry.
-
-Production backend : Langfuse prompt management (client.get_prompt).
-Fallback backend    : a small in-memory registry, used when no
-                       Langfuse keys are configured.
-
-Every agent fetches its system prompt by *name* from here rather than
-hardcoding prompt strings inline -- that's what lets a prompt be
-tuned centrally (in Langfuse) without a code deploy, once the live
-backend is wired up.
-"""
+"""Shared, named, versioned prompt registry: Langfuse prompt management in production, a small in-memory registry as the fallback."""
 from . import config
 
 if config.USE_LIVE_LANGFUSE:

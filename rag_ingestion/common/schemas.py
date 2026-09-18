@@ -1,6 +1,4 @@
-"""Dataclasses shared by ingestion tasks. Cross task boundaries as JSON/
-JSONL, never as XCom-carried objects -- each task re-reads its input from
-MinIO."""
+"""Dataclasses shared by ingestion tasks. Cross task boundaries as JSON/JSONL, never as XCom-carried objects -- each task re-reads its input from MinIO."""
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass

@@ -1,11 +1,4 @@
-"""
-Streamlit multipage entry for the LiteLLM-routed SQL agent.
-
-Living under pages/ means Streamlit auto-discovers this as a separate page
-in the sidebar when you run `streamlit run streamlit_app.py` -- no edit to
-streamlit_app.py needed, so the existing SQL/RAG/Orchestrator tabs are
-untouched.
-"""
+"""Streamlit multipage entry for the LiteLLM-routed SQL agent -- auto-discovered from pages/, no edit to streamlit_app.py needed."""
 import logging
 
 import streamlit as st

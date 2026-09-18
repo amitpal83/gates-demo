@@ -1,17 +1,4 @@
-"""
-gates_ai_common.input_validation
-----------------------------------
-Shared INPUT-side validation gate: screens the raw user prompt before
-it reaches any orchestration logic.
-
-Production backend : llm-guard (https://github.com/protectai/llm-guard)
-                      PromptInjection + Anonymize scanners.
-Fallback backend    : regex-based injection / PII screen, used when
-                      llm-guard is not installed.
-
-Every agent calls InputValidator().validate(prompt) -- nobody
-re-implements this per project.
-"""
+"""Shared INPUT-side validation gate, screening the raw user prompt: llm-guard's PromptInjection/Anonymize scanners in production, a regex fallback offline."""
 from dataclasses import dataclass
 import re
 
@@ -87,13 +74,7 @@ class InputValidator:
         return ValidationResult(True, backend="regex-fallback")
 
     def scan_document_text(self, text: str, window_size: int = 4000) -> DocumentScanResult:
-        """Scan a full parsed document for PII before it is chunked/indexed.
-
-        Unlike validate(), this only screens for PII (Anonymize) -- prompt
-        injection scanning is meaningless for a document body -- and splits
-        long documents into sliding windows since a full document is much
-        longer than a chat prompt.
-        """
+        """Scan a full parsed document for PII (not prompt injection) before it is chunked/indexed, in sliding windows."""
         if self.backend == "llm-guard":
             return self._scan_document_text_live(text, window_size)
         return self._scan_document_text_fallback(text)

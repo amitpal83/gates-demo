@@ -1,6 +1,4 @@
-"""Upserts embeddings into the prod or dev Qdrant collection (by
-dimensionality). Idempotent: stale points for this doc_id are deleted
-before the fresh batch is upserted."""
+"""Upserts embeddings into the prod or dev Qdrant collection (by dimensionality); idempotent, deleting stale points for this doc_id before the fresh batch."""
 from __future__ import annotations
 
 import json

@@ -1,20 +1,4 @@
-"""
-gates_ai_common.config
------------------------
-Central switchboard the rest of the shared library reads from.
-
-Every module in this package follows the same rule: try to import the
-real enterprise backend; if it isn't installed / configured, fall back
-to a small local implementation so the *pipeline shape* (validate ->
-prompt -> generate -> evaluate -> guardrail -> observe) is always
-runnable, in any environment, with or without API keys.
-
-This is the "common capability library" referenced throughout the
-HLD/LLD: any agent -- SQL agent, RAG agent, PDRA agent, or a future
-one nobody has built yet -- imports these modules instead of
-re-implementing validation / prompts / evaluation / guardrails /
-observability per project.
-"""
+"""Central switchboard: every module here tries the real enterprise backend first, falling back to a local implementation so the pipeline always runs."""
 import importlib
 import os
 
@@ -28,12 +12,7 @@ except ModuleNotFoundError:  # pragma: no cover - optional dependency in some en
 try:
     load_dotenv()
 except OSError:
-    # Best-effort convenience for local dev -- in a deployed environment
-    # config comes from the environment itself, not a .env file on disk.
-    # A .env that exists but isn't readable by this process's user (e.g.
-    # root-written, chmod 600, read by a non-root container user) must
-    # not crash startup.
-    pass
+    pass  # .env may exist but be unreadable (root-written, non-root container user)
 
 try:
     import certifi
