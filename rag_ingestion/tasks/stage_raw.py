@@ -1,16 +1,8 @@
-"""
-rag_ingestion.tasks.stage_raw
---------------------------------
-First pipeline task: computes the deterministic doc_id for this
-(object_key, etag) pair and copies the freshly-landed object into this
-pipeline's own 'raw/<doc_id>/source.pdf' staging key, so every downstream
-task works off a stable key that doesn't move even if the original
-upload gets deleted/overwritten.
-
-No Airflow import here (or in any other tasks/*.py module) -- this stays
-importable/unit-testable without Airflow installed. `dags/rag_ingestion_dag.py`
-wraps `run()` with `@task` and `@trace`.
-"""
+"""First pipeline task: computes doc_id and copies the uploaded object into
+this pipeline's own raw/<doc_id>/source.pdf key so later stages have a
+stable path even if the original upload moves. No Airflow import here (or
+in any other tasks/*.py) -- dags/rag_ingestion_dag.py wraps run() with
+@task and @trace."""
 from __future__ import annotations
 
 from rag_ingestion.clients import minio_client

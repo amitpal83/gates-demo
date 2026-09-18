@@ -1,19 +1,6 @@
-"""
-rag_ingestion.tasks.build_embeddings
-----------------------------------------
-Reads enriched chunks from MinIO and embeds them.
-
-Production backend : OpenAI embeddings API directly (text-embedding-3-large,
-                      1024-dim to match agents/rag_flow.py's stated
-                      embedding dimension), batched, with usage logged via
-                      gates_ai_common.observability.log_usage.
-Fallback backend    : sentence-transformers all-MiniLM-L6-v2, 384-dim,
-                      run locally -- no API call, no usage to log.
-
-Also builds a BM25-style sparse vector per chunk (rag_ingestion.common.
-sparse_vectors) alongside the dense embedding, for query-time hybrid
-dense+sparse retrieval (see load_qdrant.py and query_engine.py).
-"""
+"""Embeds enriched chunks: OpenAI (1024-dim, batched) when live, else
+sentence-transformers (384-dim) locally. Also builds a sparse vector per
+chunk for hybrid retrieval (see load_qdrant.py, query_engine.py)."""
 from __future__ import annotations
 
 import json

@@ -8,12 +8,7 @@ terraform {
     }
   }
 
-  # Local state only, deliberately -- this is a small-team/POC-leaning
-  # single-instance stack, not a multi-operator production system. No S3
-  # backend, no DynamoDB lock table. See README.md "Future improvements"
-  # for what a hardened setup would add (S3 backend + state locking, plus
-  # moving the secrets in terraform.tfvars into AWS Secrets Manager/SSM
-  # Parameter Store instead of a local file).
+  # Local state only -- see README.md "Future improvements" for an S3 backend.
 }
 
 provider "aws" {

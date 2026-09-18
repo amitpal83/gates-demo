@@ -1,61 +1,4 @@
-# Local stack for the RAG PDF ingestion pipeline (rag_ingestion/).
-#
-# Fully additive to gates_ai_lld: this does not touch litellm/docker-compose.yml,
-# agents/, streamlit_app.py, or the existing lines in the root requirements.txt.
-# Bring it up with:
-#     docker compose -f rag_ingestion/docker-compose.yml up -d
-#
-# See rag_ingestion/README.md for full setup instructions and the demo script.
-#
-# Volume/mount layout: rather than baking rag_ingestion/, gates_ai_common/,
-# and guardrails_config/ into the image (which would need a rebuild on every
-# code change), the whole repo root is bind-mounted read-only into every
-# Airflow/webhook container at /opt/rag_ingestion_root, and PYTHONPATH below
-# points at it -- so `import rag_ingestion...` and `import gates_ai_common...`
-# resolve the same way they do outside Docker. Airflow's own DAG folder is a
-# separate, additional mount (see AIRFLOW__CORE__DAGS_FOLDER's default,
-# /opt/airflow/dags) so the scheduler/webserver pick up rag_ingestion's DAG
-# file without needing DAGS_FOLDER repointed at the read-only repo mount.
-#
-# Ports, pinning, and exposure choices:
-#   - minio (9000 API / 9001 console) is bound to ALL interfaces, not just
-#     127.0.0.1. Deliberately exposed publicly per explicit request, so PDFs
-#     can be uploaded via the MinIO console/API from anywhere -- POC/
-#     exploration only, same spirit as litellm-proxy's port 4000 exposure in
-#     litellm/docker-compose.yml. A strong MINIO_ROOT_PASSWORD is essential
-#     since this port is reachable from the internet.
-#   - qdrant (6333/6334) is bound to 127.0.0.1 only -- no external consumer;
-#     the DAG/webserver/query-engine reach it over the compose network, or,
-#     for the Streamlit app running outside Docker on the same host, via
-#     localhost.
-#   - airflow-postgres (5433, mapped from the container's 5432) is bound to
-#     127.0.0.1 only, and uses a different host port from litellm's Postgres
-#     (5432) so both stacks can run on one box without clashing.
-#   - airflow-webserver (8080) is bound to all interfaces so the Airflow UI
-#     is reachable the same way the README describes for MinIO/console demos;
-#     it sits behind Airflow's own login (AIRFLOW_API_USERNAME/PASSWORD).
-#   - rag-webhook has no host port binding at all (`expose` only) -- it's
-#     purely an internal target for MinIO's event notifications over the
-#     compose network at http://rag-webhook:8090, never called from the host.
-#
-# Image pinning: every image below uses an explicit, immutable tag --
-# minio/minio, qdrant/qdrant, postgres, and the apache/airflow base image in
-# docker/Dockerfile.airflow -- NOT :latest, for the same reason
-# litellm/docker-compose.yml avoids rolling tags (a pin you bump on purpose
-# beats one that silently drifts). The one deliberate exception is
-# minio/mc:latest for the one-shot `minio-init` bootstrap job: MinIO does not
-# publish stable version tags for the `mc` client the way it does for the
-# server image, so pinning it to a specific date-stamped release is brittle
-# in a different way (that tag can be pulled/rotated). `mc` only runs once at
-# startup to configure the bucket/webhook and isn't a long-running service, so
-# the blast radius of it drifting is small; if that changes, pin it too.
-#
-# Registry note: both MinIO images are pulled from quay.io, not Docker Hub --
-# Docker Hub's minio/minio and minio/mc repos now deny anonymous pulls
-# ("repository does not exist or may require 'docker login'", confirmed
-# 2026-09), a distribution change MinIO made after this file was first
-# written. quay.io/minio/minio and quay.io/minio/mc still serve the same
-# images/tags without authentication.
+# Local stack for the RAG PDF ingestion pipeline. See rag_ingestion/README.md for setup instructions.
 
 x-airflow-common: &airflow-common
   build:
@@ -64,11 +7,7 @@ x-airflow-common: &airflow-common
   environment:
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:${AIRFLOW_POSTGRES_PASSWORD}@airflow-postgres/airflow
-    # Airflow's REST API does NOT accept HTTP Basic Auth by default (2.x's
-    # default API auth backend rejects it with 401) -- rag-webhook
-    # authenticates with AIRFLOW_API_USERNAME/PASSWORD over basic auth, so
-    # that backend must be explicitly enabled. Confirmed necessary against
-    # a live 2.10.5 deployment (2026-09).
+    # Airflow's REST API rejects basic auth by default (401) unless this is set.
     AIRFLOW__API__AUTH_BACKENDS: "airflow.api.auth.backend.basic_auth"
     AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY}
     AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW_WEBSERVER_SECRET_KEY}
@@ -98,20 +37,16 @@ x-airflow-common: &airflow-common
     LANGFUSE_HOST: ${LANGFUSE_HOST:-https://cloud.langfuse.com}
     PYTHONPATH: /opt/rag_ingestion_root
   volumes:
+    # Repo root bind-mounted read-only so code edits don't need an image rebuild.
     - ..:/opt/rag_ingestion_root:ro
     - ./dags:/opt/airflow/dags:ro
 
 services:
   minio:
-    image: quay.io/minio/minio:RELEASE.2024-11-07T00-52-20Z   # pinned, not :latest -- see header comment. Pulled from quay.io, not Docker Hub -- MinIO restricted anonymous Docker Hub pulls for minio/minio; quay.io still serves it.
+    image: quay.io/minio/minio:RELEASE.2024-11-07T00-52-20Z  # Docker Hub denies anonymous pulls of this image; quay.io mirror works.
     command: server /data --console-address ":9001"
     ports:
-      # Deliberately exposed publicly per explicit request, so PDFs can be
-      # uploaded via the MinIO console/API from anywhere -- POC/exploration
-      # only, same spirit as litellm-proxy's port 4000 exposure. A strong
-      # MINIO_ROOT_PASSWORD is essential since this port is reachable from
-      # the internet.
-      - "9000:9000"
+      - "9000:9000"  # public on purpose -- PDFs get uploaded via the console/API from anywhere
       - "9001:9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
@@ -126,7 +61,7 @@ services:
       start_period: 10s
 
   minio-init:
-    image: quay.io/minio/mc:latest   # deliberate exception to pinning -- see header comment. Pulled from quay.io -- Docker Hub's minio/mc now denies anonymous pulls.
+    image: quay.io/minio/mc:latest
     depends_on:
       minio:
         condition: service_healthy
@@ -136,14 +71,7 @@ services:
       MINIO_BUCKET: ${MINIO_BUCKET}
       RAG_WEBHOOK_SHARED_SECRET: ${RAG_WEBHOOK_SHARED_SECRET}
     entrypoint: ["/bin/sh", "-c"]
-    # Best-effort bootstrap: creates the alias, bucket, and incoming/ prefix,
-    # then wires a webhook notification target so MinIO calls rag-webhook on
-    # every .pdf landing under incoming/. The exact `mc` subcommand names and
-    # flags below (`mc admin config set ... notify_webhook:...`, `mc admin
-    # service restart`, `mc event add ... --event put`) should be
-    # spot-checked against whatever MinIO/mc version this pulls -- this CLI
-    # surface has shifted between releases. See README's "Known limitations"
-    # section.
+    # Bootstraps bucket/incoming prefix and the webhook notification target.
     command:
       - >
         until mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD"; do
@@ -160,9 +88,6 @@ services:
   qdrant:
     image: qdrant/qdrant:v1.12.1
     ports:
-      # No external consumer; the DAG/webserver/query-engine reach it over
-      # the compose network or, for the Streamlit app running outside Docker
-      # on the same host, via localhost.
       - "127.0.0.1:6333:6333"
       - "127.0.0.1:6334:6334"
     volumes:
@@ -177,9 +102,7 @@ services:
     volumes:
       - airflow_pgdata:/var/lib/postgresql/data
     ports:
-      # Separate port from litellm's Postgres (5432) so both stacks can run
-      # on one box without clashing.
-      - "127.0.0.1:5433:5432"
+      - "127.0.0.1:5433:5432"  # different host port than litellm's postgres
 
   airflow-init:
     <<: *airflow-common
@@ -192,10 +115,7 @@ services:
   airflow-webserver:
     <<: *airflow-common
     depends_on:
-      # service_started (the bare list form's default) only waits for
-      # airflow-init's container to start, not for its `airflow db
-      # migrate` to actually finish -- that race let the webserver come
-      # up against an uninitialized DB. Wait for it to exit successfully.
+      # service_started (the default) doesn't wait for db migrate to finish -- must be explicit.
       airflow-init:
         condition: service_completed_successfully
     ports:
@@ -213,23 +133,12 @@ services:
     <<: *airflow-common
     depends_on:
       - minio
-    # The apache/airflow image's default entrypoint (/entrypoint) treats
-    # any command it doesn't recognize as an Airflow subcommand and runs
-    # `airflow <command>` -- it tried `airflow uvicorn ...` and failed.
-    # Override it to run `command` directly (still under dumb-init as
-    # PID 1 for correct signal handling).
+    # apache/airflow's default entrypoint runs `airflow <command>` -- override it to run uvicorn directly.
     entrypoint: ["/usr/bin/dumb-init", "--"]
     expose:
       - "8090"
     command: uvicorn rag_ingestion.webhook.app:app --host 0.0.0.0 --port 8090
 
-  # Serves the root app (streamlit_app.py + pages/, including the
-  # "LlamaIndex RAG" query page) over Docker -- this is what actually backs
-  # the AWS deployment's public Streamlit UI (deploy/rag_ingestion_aws
-  # opens port 8501 and its `streamlit_url` output points here). Optional
-  # for local/dev use: rag_ingestion/README.md's workflow of running
-  # `streamlit run streamlit_app.py` directly in the host venv instead of
-  # via Docker still works against the same Qdrant instance.
   streamlit:
     build:
       context: ..

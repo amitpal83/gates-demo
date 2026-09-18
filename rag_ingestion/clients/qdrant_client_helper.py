@@ -1,19 +1,8 @@
-"""
-rag_ingestion.clients.qdrant_client_helper
----------------------------------------------
-Wraps `qdrant_client.QdrantClient`. qdrant-client is a core dependency of
-this subproject (not optional), so it is imported at module level.
-
-Collections use two NAMED vectors per point -- "dense" (OpenAI/
-sentence-transformers embedding) and "sparse" (BM25-style term-frequency
-vector, see rag_ingestion.common.sparse_vectors) -- so query_engine.py can
-run a single hybrid_search() call that fuses both via Qdrant's Query API
-(RRF). This needs qdrant-client/qdrant-server >= 1.10 (Query API,
-sparse vectors, Modifier.IDF); the server is pinned to v1.12.1 in
-docker-compose.yml. A collection created before hybrid search existed
-(single unnamed vector) is NOT compatible with this schema -- drop it and
-let ensure_collection recreate it before re-ingesting.
-"""
+"""Wraps qdrant_client.QdrantClient. Collections use two named vectors per
+point ("dense" + "sparse") so hybrid_search() can fuse both in one call --
+needs qdrant-client/server >= 1.10. A collection created before hybrid
+search existed (single unnamed vector) isn't compatible; drop and
+re-ingest."""
 from __future__ import annotations
 
 import logging
@@ -49,12 +38,9 @@ def get_client() -> QdrantClient:
 
 
 def ensure_collection(client: QdrantClient, collection_name: str, vector_size: int) -> None:
-    """Idempotent collection creation -- dense + sparse named vectors."""
     try:
         exists = client.collection_exists(collection_name)
     except Exception:
-        # Older qdrant-client versions don't have collection_exists; fall back
-        # to listing collections.
         exists = collection_name in {c.name for c in client.get_collections().collections}
 
     if not exists:
@@ -66,12 +52,6 @@ def ensure_collection(client: QdrantClient, collection_name: str, vector_size: i
 
 
 def ensure_payload_indexes(client: QdrantClient, collection_name: str) -> None:
-    """Idempotent creation of payload indexes used for filtering.
-
-    Exact idempotent-check APIs vary by qdrant-client version, so each
-    index creation is wrapped in its own try/except and treated as a
-    no-op if the index already exists.
-    """
     index_fields = {
         "ingestion_ts": PayloadSchemaType.INTEGER,
         "pdf_type": PayloadSchemaType.KEYWORD,
@@ -111,7 +91,6 @@ def upsert_points(client: QdrantClient, collection_name: str, points: list[dict]
 
 
 def delete_points_by_doc_id(client: QdrantClient, collection_name: str, doc_id: str) -> None:
-    """Used by load_qdrant for idempotent re-ingestion (delete-then-upsert)."""
     client.delete(
         collection_name=collection_name,
         points_selector=Filter(
@@ -121,10 +100,6 @@ def delete_points_by_doc_id(client: QdrantClient, collection_name: str, doc_id: 
 
 
 def build_metadata_filter(filters: dict) -> Filter | None:
-    """Builds a Qdrant Filter from detected {field: value} metadata hints
-    (see query_engine.py's query-understanding stage) against the KEYWORD
-    payload indexes ensure_payload_indexes creates (pdf_type/author/owner/
-    doc_id/source_object_key). Returns None if there's nothing to filter on."""
     conditions = [
         FieldCondition(key=field, match=MatchValue(value=value))
         for field, value in (filters or {}).items()
@@ -143,15 +118,9 @@ def hybrid_search(
     candidate_limit: int = 20,
     query_filter: Filter | None = None,
 ) -> list[ScoredPoint]:
-    """Single-call hybrid retrieval: dense + sparse candidates (each scoped
-    by the same metadata filter, when given), fused via Qdrant's native RRF
-    (Reciprocal Rank Fusion) and cut down to `limit` results.
-
-    `candidate_limit` is how many candidates each of the dense/sparse
-    prefetches contributes to the fusion before it's cut to `limit` --
-    keep it >= limit and comfortably above it so fusion has enough from
-    each side to actually blend (a subsequent cross-encoder rerank step,
-    see query_engine.py, then re-scores this candidate set)."""
+    """One call: dense + sparse candidates fused via RRF, then cut to `limit`.
+    candidate_limit should stay above `limit` so a later rerank has enough
+    to work with."""
     response = client.query_points(
         collection_name=collection_name,
         prefetch=[

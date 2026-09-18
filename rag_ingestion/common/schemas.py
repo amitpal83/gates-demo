@@ -1,11 +1,6 @@
-"""
-rag_ingestion.common.schemas
--------------------------------
-Plain dataclasses shared by the ingestion tasks. These cross task
-boundaries as JSON/JSONL (never as XCom-carried Python objects -- each
-task re-reads its actual input from MinIO), so every dataclass here is
-built from and converted back into plain dicts via `to_dict`/`from_dict`.
-"""
+"""Dataclasses shared by ingestion tasks. Cross task boundaries as JSON/
+JSONL, never as XCom-carried objects -- each task re-reads its input from
+MinIO."""
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
@@ -78,10 +73,6 @@ class EmbeddingRecord:
     chunk_index: int
     vector: list[float]
     payload: dict
-    # BM25-style sparse vector (see common/sparse_vectors.py), stored
-    # alongside the dense `vector` so load_qdrant.py can upsert both into
-    # the same point for hybrid dense+sparse retrieval. Default to empty
-    # so records written before hybrid search existed still deserialize.
     sparse_indices: list[int] = None
     sparse_values: list[float] = None
 

@@ -1,15 +1,5 @@
-"""
-rag_ingestion.tasks.chunk_document
---------------------------------------
-Reads the parsed markdown from MinIO and splits it into chunks.
-
-Production backend : llama_index's SentenceSplitter over a Document, when
-                      llama_index is installed.
-Fallback backend    : a simple fixed-window splitter with overlap (same
-                      spirit as agents/rag_flow.py's chunk_text, but
-                      reimplemented here rather than imported -- this
-                      subproject must not import from agents/).
-"""
+"""Splits parsed markdown into chunks: LlamaIndex's SentenceSplitter when
+available, else a fixed-window splitter with overlap."""
 from __future__ import annotations
 
 import json

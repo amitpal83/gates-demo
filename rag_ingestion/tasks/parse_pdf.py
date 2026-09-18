@@ -1,11 +1,5 @@
-"""
-rag_ingestion.tasks.parse_pdf
---------------------------------
-Reads the staged raw PDF bytes from MinIO, parses it to markdown via
-LlamaParse (or the pypdf fallback), and writes the markdown + parse
-metadata back to MinIO. Only small dicts/keys cross the Airflow XCom
-boundary -- the parsed text itself lives in MinIO.
-"""
+"""Reads the staged PDF from MinIO, parses to markdown via LlamaParse (or
+pypdf fallback), writes markdown + parse metadata back to MinIO."""
 from __future__ import annotations
 
 from rag_ingestion.clients import llamaparse_client, minio_client

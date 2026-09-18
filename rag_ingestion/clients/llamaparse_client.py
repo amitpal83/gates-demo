@@ -1,12 +1,5 @@
-"""
-rag_ingestion.clients.llamaparse_client
-------------------------------------------
-Production backend : LlamaParse (LlamaCloud) -- PDF -> markdown, handles
-                      tables/layout much better than raw text extraction.
-Fallback backend    : pypdf page-by-page text extraction (already a root
-                      dependency), used when llama_parse isn't installed
-                      or LLAMA_CLOUD_API_KEY isn't configured.
-"""
+"""PDF -> markdown. LlamaParse when available and configured, else pypdf
+page-by-page text extraction."""
 from __future__ import annotations
 
 import logging

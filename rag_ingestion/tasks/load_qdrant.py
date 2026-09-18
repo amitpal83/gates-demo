@@ -1,18 +1,6 @@
-"""
-rag_ingestion.tasks.load_qdrant
------------------------------------
-Reads the embeddings JSONL from MinIO and upserts into Qdrant, choosing
-the prod (1024-dim) or dev (384-dim) collection based on the embedding
-dimensionality actually produced upstream. Idempotent: any stale points
-for this doc_id are deleted before the fresh batch is upserted, so
-re-running ingestion for the same document doesn't leave orphaned points
-from a previous chunking.
-
-Each point carries both the dense embedding and the BM25-style sparse
-vector build_embeddings.py computed, as two named vectors ("dense" /
-"sparse") -- see qdrant_client_helper.ensure_collection -- so
-query_engine.py's hybrid_search() can fuse both in one call at query time.
-"""
+"""Upserts embeddings into the prod or dev Qdrant collection (by
+dimensionality). Idempotent: stale points for this doc_id are deleted
+before the fresh batch is upserted."""
 from __future__ import annotations
 
 import json

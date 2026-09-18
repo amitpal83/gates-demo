@@ -1,24 +1,7 @@
-# Airflow image for the RAG PDF ingestion pipeline (rag_ingestion/).
-#
-# Pinned to the same exact Airflow version as apache-airflow in
-# requirements.txt (2.10.5) -- keep these two in lockstep if you ever bump
-# one; a mismatch between the base image's preinstalled Airflow and the
-# pip-installed version in requirements.txt is a classic way to break the
-# constraints Airflow's own image build validates against.
-#
-# This layers only this subproject's Python dependencies on top of the
-# base image. Application code (rag_ingestion/, gates_ai_common/,
-# guardrails_config/) is NOT copied in here -- docker-compose.yml bind-mounts
-# the repo root into the container instead, so code edits on the host are
-# picked up without an image rebuild. See docker-compose.yml's header
-# comment for the mount layout.
+# Keep this version in lockstep with apache-airflow in requirements.txt.
 FROM apache/airflow:2.10.5-python3.11
 
 USER root
-# Any OS-level packages needed by llama-parse/pypdf/sentence-transformers
-# (e.g. build tooling for a package that ships no wheel for this platform)
-# go here if a future dependency bump requires them. None are needed today.
-
 USER airflow
 COPY requirements.txt /requirements.txt
 RUN pip install --no-cache-dir -r /requirements.txt

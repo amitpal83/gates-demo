@@ -1,8 +1,4 @@
-# Uses the account's default VPC/subnet rather than provisioning a custom
-# VPC. This is a single-instance, no-isolation-requirement stack (one box
-# running the whole rag_ingestion compose stack) -- a custom VPC would add
-# complexity (subnets, route tables, NAT/IGW wiring) and cost for no benefit
-# here. Revisit if this ever needs to sit behind a private network.
+# Uses the account's default VPC -- a single-box stack doesn't need a custom one.
 data "aws_vpc" "default" {
   default = true
 }
@@ -53,41 +49,24 @@ resource "aws_security_group" "rag_ingestion" {
     cidr_blocks = var.ui_allowed_cidr
   }
 
-  # Deliberately public per explicit request so PDFs can be uploaded
-  # directly via the MinIO console/API from anywhere. This is an
-  # unhardened, POC-style exposure -- same spirit as this repo's
-  # litellm/docker-compose.yml exposing its proxy port publicly for
-  # exploration. A strong minio_root_password is essential since this port
-  # is reachable from the internet; revisit before any real production use.
+  # Public on purpose so PDFs can be uploaded from anywhere -- keep minio_root_password strong.
   ingress {
-    description = "MinIO API (deliberately public -- see comment above)"
+    description = "MinIO API (deliberately public)"
     from_port   = 9000
     to_port     = 9000
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # Deliberately public per explicit request so PDFs can be uploaded
-  # directly via the MinIO console/API from anywhere. This is an
-  # unhardened, POC-style exposure -- same spirit as this repo's
-  # litellm/docker-compose.yml exposing its proxy port publicly for
-  # exploration. A strong minio_root_password is essential since this port
-  # is reachable from the internet; revisit before any real production use.
   ingress {
-    description = "MinIO console (deliberately public -- see comment above)"
+    description = "MinIO console (deliberately public)"
     from_port   = 9001
     to_port     = 9001
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # No rule for Qdrant (6333/6334) and no rule for the rag-webhook service:
-  # both are internal-only on the Docker Compose network. Qdrant has no
-  # external consumer and rag-webhook is reached only by MinIO's own webhook
-  # notification inside the compose network -- neither is ever reachable
-  # from outside the box, so no security-group entry is needed or correct
-  # for them. This is intentional; do not "fix" this apparent gap by adding
-  # ingress rules for those ports.
+  # No rule for Qdrant/rag-webhook -- both are internal-only on the compose network.
 
   egress {
     description = "Allow all outbound"

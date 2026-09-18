@@ -1,22 +1,6 @@
-"""
-rag_ingestion.webhook.app
------------------------------
-Internal-only FastAPI service that turns a MinIO `s3:ObjectCreated:*`
-event notification into an `rag_pdf_ingestion` Airflow DAG run.
-
-Never reachable from outside the Docker Compose network (see
-docker-compose.yml's `rag-webhook` service, which only `expose`s its port,
-never publishes one to the host) -- MinIO's notify_webhook target is the
-only intended caller, POSTing to /minio-event. Still gated by
-RAG_WEBHOOK_SHARED_SECRET (configured as MinIO's notify_webhook
-`auth_token`, which MinIO sends as `Authorization: Bearer <token>`) as
-defense-in-depth against anything else reachable on that network.
-
-Idempotent by construction: dag_run_id is deterministically derived from
-the same (object_key, etag) pair stage_raw.run() uses to compute doc_id
-(see rag_ingestion.common.keys), so a duplicate MinIO notification for the
-same object version maps to the same dag_run instead of double-ingesting.
-"""
+"""Turns a MinIO s3:ObjectCreated event into a rag_pdf_ingestion DAG run.
+Internal-only (never published to the host); auth checked against
+RAG_WEBHOOK_SHARED_SECRET as defense-in-depth."""
 from __future__ import annotations
 
 import logging
@@ -98,9 +82,7 @@ async def minio_event(request: Request, authorization: str | None = Header(defau
             continue
 
         if not (object_key.startswith(_INCOMING_PREFIX) and object_key.endswith(_PDF_SUFFIX)):
-            # `mc event add` is already scoped to --prefix incoming/ --suffix
-            # .pdf -- this is defense in depth in case that filter is ever
-            # loosened or bypassed by a manually-fired notification.
+            # Defense in depth -- mc event add already scopes to incoming/*.pdf.
             logger.info("Ignoring event for %s (outside incoming/*.pdf scope).", object_key)
             continue
 

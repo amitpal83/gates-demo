@@ -5,17 +5,7 @@ variable "aws_region" {
 }
 
 variable "instance_type" {
-  description = <<-EOT
-    EC2 instance type for the single box running the whole rag_ingestion
-    docker-compose stack. Defaults to t3.xlarge (4 vCPU / 16 GB RAM):
-    Airflow alone runs a webserver + scheduler + its own dedicated Postgres,
-    Qdrant keeps its HNSW index resident in memory, MinIO and the rag-webhook
-    service add more on top, and the Streamlit UI stacks on the same box --
-    that combination wants real headroom, not a burstable micro/small
-    instance. t3.large (2 vCPU / 8 GB RAM) is a cheaper fallback if this is
-    only for light, occasional use, but expect Airflow + Qdrant to compete
-    for memory under any real ingestion load at that size.
-  EOT
+  description = "EC2 instance type for the box running the whole compose stack. t3.xlarge (4 vCPU/16GB) by default; t3.large is a cheaper fallback for light use."
   type        = string
   default     = "t3.xlarge"
 }

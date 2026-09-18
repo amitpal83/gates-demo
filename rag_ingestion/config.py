@@ -1,19 +1,11 @@
-"""
-rag_ingestion.config
-----------------------
-Subproject-local env-var switchboard, mirroring the try-real-then-fallback
-style of `gates_ai_common.config`: every module in this subproject reads
-its knobs from here instead of calling `os.getenv` directly.
-
-Names in this file are fixed -- the docker-compose/Terraform infra and the
-Airflow DAG/webhook both key off these exact env var names.
-"""
+"""Env-var switchboard for rag_ingestion. Names here are fixed contracts
+with docker-compose.yml, Terraform, and the DAG/webhook."""
 import importlib
 import os
 
 try:
     from dotenv import load_dotenv
-except ModuleNotFoundError:  # pragma: no cover - optional dependency in some envs
+except ModuleNotFoundError:
     def load_dotenv(*args, **kwargs):
         return False
 
@@ -21,13 +13,7 @@ except ModuleNotFoundError:  # pragma: no cover - optional dependency in some en
 try:
     load_dotenv()
 except OSError:
-    # Best-effort convenience for local dev -- in any deployed environment
-    # (this AWS box included) config comes from the environment itself
-    # (see docker-compose.yml's `environment:` blocks), not a .env file on
-    # disk. A .env that exists but isn't readable by this container's user
-    # (e.g. root-written, chmod 600, read by a non-root container user)
-    # must not crash startup.
-    pass
+    pass  # .env may exist but be unreadable (root-written, non-root container user)
 
 
 def _installed(module_name: str) -> bool:
@@ -47,45 +33,43 @@ def _bool_env(name: str, default: bool) -> bool:
 
 GATES_ENV = os.getenv("GATES_ENV", "development").lower()
 
-# -- MinIO (raw PDF landing zone + stage buckets) -------------------------
+# -- MinIO --
 MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "localhost:9000")
 MINIO_ROOT_USER = os.getenv("MINIO_ROOT_USER")
 MINIO_ROOT_PASSWORD = os.getenv("MINIO_ROOT_PASSWORD")
 MINIO_BUCKET = os.getenv("MINIO_BUCKET", "gates-rag-ingestion")
 MINIO_SECURE = _bool_env("MINIO_SECURE", False)
 
-# -- Qdrant (vector store) -------------------------------------------------
+# -- Qdrant --
 QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
 QDRANT_COLLECTION = os.getenv("QDRANT_COLLECTION", "gates_rag_docs")
 QDRANT_COLLECTION_DEV = os.getenv("QDRANT_COLLECTION_DEV", "gates_rag_docs_dev384")
 
-# -- Embeddings -------------------------------------------------------------
+# -- Embeddings --
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "text-embedding-3-large")
 EMBEDDING_DIMENSIONS = int(os.getenv("EMBEDDING_DIMENSIONS", "1024"))
 
-# -- LlamaParse ---------------------------------------------------------------
+# -- LlamaParse --
 LLAMA_CLOUD_API_KEY = os.getenv("LLAMA_CLOUD_API_KEY")
 
-# -- Airflow REST API (used by the webhook to trigger dag runs) ------------
+# -- Airflow REST API (webhook uses this to trigger dag runs) --
 AIRFLOW_API_URL = os.getenv("AIRFLOW_API_URL", "http://localhost:8080")
 AIRFLOW_API_USERNAME = os.getenv("AIRFLOW_API_USERNAME")
 AIRFLOW_API_PASSWORD = os.getenv("AIRFLOW_API_PASSWORD")
 AIRFLOW_DAG_ID = os.getenv("AIRFLOW_DAG_ID", "rag_pdf_ingestion")
 
-# -- Webhook ------------------------------------------------------------------
+# -- Webhook --
 RAG_WEBHOOK_PORT = int(os.getenv("RAG_WEBHOOK_PORT", "8090"))
 RAG_WEBHOOK_SHARED_SECRET = os.getenv("RAG_WEBHOOK_SHARED_SECRET")
 
-# -- Optional-dependency flags ------------------------------------------------
+# -- Optional-dependency flags --
 HAS_MINIO = _installed("minio")
 HAS_LLAMA_PARSE = _installed("llama_parse")
 HAS_LLAMA_INDEX = _installed("llama_index")
 HAS_QDRANT_CLIENT = _installed("qdrant_client")
 
-# When False, embedding/query code should use the dev fallback
-# (sentence-transformers, 384-dim, QDRANT_COLLECTION_DEV) instead of the
-# production path (OpenAI embeddings, 1024-dim, QDRANT_COLLECTION).
+# False -> dev fallback (sentence-transformers, 384-dim); True -> OpenAI, 1024-dim.
 USE_LIVE_EMBEDDINGS = bool(OPENAI_API_KEY) and HAS_LLAMA_INDEX
 
 

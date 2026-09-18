@@ -1,16 +1,7 @@
-"""
-rag_ingestion.tasks.extract_metadata
-----------------------------------------
-Attaches document-level metadata to every chunk, then runs the two
-cross-cutting ingestion-time safety gates from gates_ai_common on the
-FULL joined chunk text: PII scanning (InputValidator.scan_document_text)
-and content-safety (SecurityGuardrail.check_document_safety).
-
-A gate failure raises RuntimeError so the Airflow task -- and therefore
-the DAG run -- fails visibly, rather than silently skipping downstream
-steps. The failure reason is also written to MinIO under failed/<doc_id>/
-for auditability.
-"""
+"""Attaches document-level metadata to every chunk, then runs the PII
+(InputValidator) and content-safety (SecurityGuardrail) gates on the full
+joined text. A gate failure raises so the Airflow task fails visibly; the
+reason is also written to MinIO under failed/<doc_id>/ for auditing."""
 from __future__ import annotations
 
 import json

@@ -1,20 +1,6 @@
 """
 Streamlit multipage entry for the LlamaIndex-backed RAG pipeline
-(rag_ingestion/). Living under pages/ means Streamlit auto-discovers this
-as a separate sidebar page when you run `streamlit run streamlit_app.py`
--- no edit to streamlit_app.py needed.
-
-Queries whatever documents the `rag_pdf_ingestion` Airflow DAG has
-ingested into Qdrant so far (see rag_ingestion/README.md to bring that
-pipeline up and upload a PDF). This is a separate pipeline/store from the
-"RAG Agent" tab in the main app, which answers from a single in-memory
-demo factsheet.
-
-The query pipeline (rag_ingestion/query_engine.py) runs: Understand Query
--> Retrieve (hybrid dense+sparse) -> Rerank & Assemble -> Generate ->
-Respond, with evaluation/cost logging happening afterwards in a
-background thread (fire-and-forget) so it never adds latency here -- see
-that module's docstring.
+(rag_ingestion/). LlamaIndex-backed RAG pipeline.
 """
 import logging
 
@@ -29,14 +15,10 @@ st.set_page_config(page_title="LlamaIndex RAG", layout="wide")
 st.title("LlamaIndex RAG")
 st.caption(
     "Ask questions about PDFs ingested through the Airflow pipeline (MinIO -> LlamaParse -> "
-    "LlamaIndex chunking -> metadata/safety gates -> embeddings -> Qdrant). See "
-    "rag_ingestion/README.md to bring that stack up and upload a document."
+    "LlamaIndex chunking -> metadata/safety gates -> embeddings -> Qdrant)"
 )
 st.caption(
-    "Pipeline: Understand Query -> Retrieve (hybrid dense+sparse search + metadata filter) -> "
-    "Rerank & Assemble (cross-encoder + citations) -> Generate -> Respond. Evaluation and "
-    "cost/latency logging run afterwards in the background (fire-and-forget) and don't delay "
-    "the answer below."
+    "Pipeline"
 )
 
 

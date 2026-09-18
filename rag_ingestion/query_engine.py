@@ -1,33 +1,6 @@
-"""
-rag_ingestion.query_engine
-------------------------------
-Query-time RAG pipeline over the Airflow-ingested Qdrant collection:
-
-    User Query
-      -> Understand Query   (validate + LLM rewrite/expand + detect filters)
-      -> Retrieve           (embed dense+sparse, hybrid search + metadata
-                              filter, in one Qdrant call)
-      -> Rerank & Assemble  (cross-encoder rerank + numbered-citation prompt)
-      -> Generate           (LLM call)
-      -> Respond            (answer + citations -> caller; guardrail gates this)
-         \\-> [async, fire-and-forget] Evaluate + Log (score, latency, cost, trace)
-
-Uses the same gates_ai_common cross-cutting stack every other agent in
-this repo uses (input validation, LLM client, prompt library, evaluator,
-guardrail, observability) -- see agents/rag_flow.py's RAGAgent for the
-non-hybrid, in-memory-store version of this same shape.
-
-The output-safety guardrail is a blocking check right before Respond
-(unsafe answers never reach the caller), but quality evaluation and cost/
-usage logging run afterwards in a background thread and never delay the
-response -- they only feed observability (gates_ai_common's local log /
-Langfuse), not the answer itself.
-
-Needs no dependency beyond what ingestion already requires: qdrant-client
-(hybrid search), openai/sentence-transformers (dense embeddings + LLM
-calls), sentence-transformers (CrossEncoder rerank -- same package as the
-dev embedding fallback, already required).
-"""
+"""Query-time RAG pipeline: understand query -> hybrid retrieve (dense+
+sparse, one Qdrant call) -> rerank+cite -> generate -> guardrail -> respond.
+Evaluation/cost logging run async, after the response is already sent."""
 from __future__ import annotations
 
 import json
@@ -59,7 +32,7 @@ _CANDIDATE_K = 20
 
 _FILTER_HINT_PATTERN = re.compile(r"\b(pdf_type|type|author|owner)\s*[:=]\s*([\w.\-]+)", re.IGNORECASE)
 
-_cross_encoder = None  # lazily loaded, module-level cache (expensive to construct per query)
+_cross_encoder = None
 
 
 def _embed_query_live(question: str) -> list[float]:
@@ -95,10 +68,7 @@ def _get_cross_encoder():
 
 
 def _lexical_rerank(question: str, hits: list[dict]) -> list[dict]:
-    """Fallback reranker for when the cross-encoder model can't be loaded
-    (e.g. no network to fetch weights) -- the same lexical-overlap boost
-    agents/rag_flow.py's rerank() uses, applied on top of each hit's
-    already-fused hybrid score."""
+    """Fallback when the cross-encoder model can't load (e.g. no network)."""
     query_words = set(re.findall(r"[a-z]{4,}", question.lower()))
 
     def boosted(hit: dict) -> float:
@@ -141,11 +111,6 @@ def _build_context_with_citations(hits: list[dict]) -> tuple[str, list[dict]]:
 
 
 class LlamaIndexRAGQuery:
-    """Query-time RAG pipeline: Understand -> Retrieve (hybrid) -> Rerank &
-    Assemble -> Generate -> Respond, with evaluation/cost logging deferred
-    to a fire-and-forget background thread so it never adds latency to the
-    user-facing response."""
-
     def __init__(self, similarity_top_k: int = 4, candidate_k: int = _CANDIDATE_K):
         self.validator = InputValidator()
         self.prompts = PromptLibrary()
@@ -157,9 +122,7 @@ class LlamaIndexRAGQuery:
         self.collection_name = _collection_name()
         self._client = qdrant_client_helper.get_client()
 
-    # -- Stage 1: Understand Query ---------------------------------------
     def _understand_query(self, question: str) -> dict:
-        """clean + rewrite/expand + detect filters."""
         cleaned = question.strip()
 
         if self.llm.backend != "openai":
@@ -185,14 +148,12 @@ class LlamaIndexRAGQuery:
         expanded_query = _FILTER_HINT_PATTERN.sub("", cleaned).strip() or cleaned
         return {"expanded_query": expanded_query, "filters": filters, "usage": None, "backend": "heuristic-fallback"}
 
-    # -- Stage 2: Retrieve ------------------------------------------------
     def _retrieve(self, expanded_query: str, filters: dict) -> list[dict]:
-        """embed (dense + sparse) + hybrid search + metadata filter, in one call."""
         try:
             if not self._client.collection_exists(self.collection_name):
                 return []
         except Exception:
-            pass  # older qdrant-client: let the search call itself surface any real error
+            pass
 
         dense_vector = _embed_query_dense(expanded_query)
         sparse_indices, sparse_values = build_sparse_vector(expanded_query)
@@ -223,20 +184,16 @@ class LlamaIndexRAGQuery:
             for point in scored_points
         ]
 
-    # -- Stage 3: Rerank & Assemble ---------------------------------------
     def _rerank_and_assemble(self, query_for_rerank: str, hits: list[dict]) -> tuple[list[dict], str, str, list[dict]]:
-        """cross-encoder rerank + build prompt with citations."""
         reranked, rerank_backend = _cross_encoder_rerank(query_for_rerank, hits)
         top_hits = reranked[: self.similarity_top_k]
         context_block, citations = _build_context_with_citations(top_hits)
         return top_hits, rerank_backend, context_block, citations
 
-    # -- Stage 4: Generate --------------------------------------------------
     def _generate(self, context_block: str, question: str) -> tuple[str, dict]:
         system = self.prompts.get("llamaindex_rag_agent.system")
         return self.llm.complete(system, f"Context:\n{context_block}\n\nQuestion: {question}")
 
-    # -- Async, fire-and-forget: Evaluate + Log ------------------------------
     @trace(name="llamaindex_rag_query.async_evaluate")
     def _evaluate_and_log(self, question: str, answer: str, top_hits: list[dict], usage: dict, started_at: float) -> None:
         try:
@@ -254,14 +211,13 @@ class LlamaIndexRAGQuery:
                 latency_ms, usage_record["estimated_cost_usd"],
             )
         except Exception:
-            logger.warning("Async evaluate+log failed (this never affects the response already sent).", exc_info=True)
+            logger.warning("Async evaluate+log failed (response was already sent).", exc_info=True)
 
     @trace(name="llamaindex_rag_query")
     def run(self, question: str) -> dict:
         started_at = time.time()
         stages: dict = {"collection_name": self.collection_name}
 
-        # Understand Query: validate, then rewrite/expand + detect filters.
         validation = self.validator.validate(question)
         stages["input_validation"] = vars(validation)
         if not validation.is_safe:
@@ -273,7 +229,6 @@ class LlamaIndexRAGQuery:
         filters = understanding["filters"]
         total_usage = dict(understanding.get("usage") or {"input_tokens": 0, "output_tokens": 0})
 
-        # Retrieve: embed + hybrid search + metadata filter, in one call.
         hits = self._retrieve(expanded_query, filters)
         stages["retrieved"] = [
             {"score": round(h["score"], 3), "doc_id": h["doc_id"], "text_preview": h["text"][:80] + "..."}
@@ -286,34 +241,24 @@ class LlamaIndexRAGQuery:
                 "stages": stages,
             }
 
-        # Rerank & Assemble: cross-encoder rerank + build prompt with citations.
         top_hits, rerank_backend, context_block, citations = self._rerank_and_assemble(expanded_query, hits)
         stages["rerank_backend"] = rerank_backend
         stages["reranked"] = [{"score": round(h.get("rerank_score", 0.0), 3), "doc_id": h["doc_id"]} for h in top_hits]
 
-        # Generate: LLM call.
         answer, usage = self._generate(context_block, question)
         stages["answer"] = answer
         stages["llm_backend"] = self.llm.backend
         total_usage["input_tokens"] = total_usage.get("input_tokens", 0) + usage["input_tokens"]
         total_usage["output_tokens"] = total_usage.get("output_tokens", 0) + usage["output_tokens"]
 
-        # Output-safety guardrail -- blocking, gates the response (unlike
-        # the evaluation stage below, which never delays the response).
         guard_result = self.guardrail.check(answer)
         stages["guardrail"] = vars(guard_result)
         if not guard_result.allowed:
             return {"status": "blocked_by_guardrail", "stages": stages}
 
-        # Respond: hand the answer + citations back now.
         stages["citations"] = citations
-        stages["evaluation"] = (
-            "running asynchronously (fire-and-forget) -- see "
-            "gates_ai_common/observability.log or Langfuse"
-        )
+        stages["evaluation"] = "running asynchronously -- see gates_ai_common/observability.log or Langfuse"
 
-        # Evaluate + Log: fire-and-forget, non-blocking -- runs after the
-        # response is already on its way back to the caller.
         threading.Thread(
             target=self._evaluate_and_log,
             args=(question, answer, top_hits, total_usage, started_at),
