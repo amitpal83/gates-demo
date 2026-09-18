@@ -1,8 +1,9 @@
-# GATES AI architecture - reference implementation
+#  AI architecture - reference implementation
 
-## Runtime notes
+This primarily shows the reference implementation of AI Architecture.  Involves use of cross cutting concerns (Input Validation, Prompt Library, Observability, Security Guardrails) which can be utilized for Agents and  RAG Implementations Uses streamlit as UI for reference implementation.
 
-- Use Python 3.13 for the supplied `venv313` environment. On Python 3.13 and newer, `llm-guard` is intentionally excluded because its pinned `sentencepiece` dependency has no compatible wheel; input validation uses the documented regex fallback.
-- Set `GATES_ENV=production` before deploying. Production startup requires `OPENAI_API_KEY`, `langchain`, and `langgraph`; the Streamlit app stops rather than serving mock LLM responses when these requirements are missing.
-- Set `GATES_ENV=development` or omit it for local demos. Without `OPENAI_API_KEY`, responses come from deterministic mock implementations and are not representative of production model quality.
+RAG pipelines primarily involves Airflow, MinIO, Qdrant and Streamlit for end to end reference implementation. May look at other readme 
+
+Reference Implementation also involves liteLLM which can be used as proxy and provides a lot of cross cutting concerns
+
 
