@@ -8,7 +8,7 @@ services:
     environment:
       GDB_JAVA_OPTS: ${GRAPHDB_JAVA_OPTS:--Xms1g -Xmx2g}
     ports:
-      - "127.0.0.1:7200:7200"  # Workbench; localhost only -- reach it with an SSH tunnel
+      - "7200:7200"  # Workbench; also needs the security group opened. Turn GraphDB security on (Setup > Users and Access) before exposing it.
     volumes:
       - graphdb_data:/opt/graphdb/home
 
@@ -83,6 +83,8 @@ services:
     environment:
       QDRANT_URL: http://qdrant:6333
       GRAPHDB_URL: http://graphdb:7200
+      GRAPHDB_USER: ${GRAPHDB_USER:-}
+      GRAPHDB_PASSWORD: ${GRAPHDB_PASSWORD:-}
       POLICY_DB_HOST: policy-postgres
       POLICY_DB_PASSWORD: ${LIC_POSTGRES_PASSWORD}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
@@ -95,6 +97,12 @@ services:
         condition: service_started
       qdrant:
         condition: service_started
+
+  # Airflow runs the DAG tasks in the scheduler (LocalExecutor); these credentials let build_ontology_task write to GraphDB once security is on.
+  airflow-scheduler:
+    environment:
+      GRAPHDB_USER: ${GRAPHDB_USER:-}
+      GRAPHDB_PASSWORD: ${GRAPHDB_PASSWORD:-}
 
 volumes:
   graphdb_data:

@@ -32,6 +32,8 @@ LLAMA_CLOUD_API_KEY = os.getenv("LLAMA_CLOUD_API_KEY")
 # -- GraphDB --
 GRAPHDB_URL = os.getenv("GRAPHDB_URL", "http://graphdb:7200")
 GRAPHDB_REPOSITORY = os.getenv("GRAPHDB_REPOSITORY", "lic_policy")
+GRAPHDB_USER = os.getenv("GRAPHDB_USER") or None  # only needed once GraphDB security is switched on
+GRAPHDB_PASSWORD = os.getenv("GRAPHDB_PASSWORD") or None
 
 # -- PostgreSQL (policy records) --
 POLICY_DB_HOST = os.getenv("POLICY_DB_HOST", "policy-postgres")

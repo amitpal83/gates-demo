@@ -41,6 +41,16 @@ Portkey later: the code uses the OpenAI SDK, which reads `OPENAI_BASE_URL`. Add 
 
 ## Run (from the repo root, on the box)
 
+One command starts everything (shared infra, Airflow, LIC services), re-runs the MinIO setup and verifies the DAG loaded:
+
+```bash
+bash ontology_graph/deploy.sh --pull     # --pull does git pull --ff-only first
+bash ontology_graph/deploy.sh status     # show service state
+bash ontology_graph/deploy.sh down       # stop only the LIC services
+```
+
+The manual equivalent:
+
 ```bash
 docker compose -f rag_ingestion/docker-compose.yml -f ontology_graph/docker-compose.yml \
   up -d --build graphdb policy-postgres lic-webhook lic-minio-init lic-ui

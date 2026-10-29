@@ -40,7 +40,8 @@ _REPO_CONFIG = """
 
 
 def _client() -> httpx.Client:
-    return httpx.Client(base_url=config.GRAPHDB_URL, timeout=120.0)
+    auth = (config.GRAPHDB_USER, config.GRAPHDB_PASSWORD) if config.GRAPHDB_USER and config.GRAPHDB_PASSWORD else None
+    return httpx.Client(base_url=config.GRAPHDB_URL, timeout=120.0, auth=auth)
 
 
 def wait_ready(timeout_s: int = 180) -> None:
