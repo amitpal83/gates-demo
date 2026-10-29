@@ -1,0 +1,5 @@
+streamlit
+qdrant-client>=1.10.0
+openai
+httpx
+psycopg2-binary

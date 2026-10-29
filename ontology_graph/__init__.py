@@ -1,0 +1,1 @@
+"""LIC policy pipeline: MinIO licdocuments/ -> Airflow -> Qdrant + GraphDB ontology, queried alongside PostgreSQL policy records. Self-contained: imports nothing from gates_ai_common or rag_ingestion."""

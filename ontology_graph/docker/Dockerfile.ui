@@ -1,0 +1,13 @@
+# Build context is the repo root (see ontology_graph/docker-compose.yml); installs only ontology_graph's own requirements.
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY ontology_graph/requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt
+
+COPY ontology_graph /app/ontology_graph
+ENV PYTHONPATH=/app
+
+EXPOSE 8503
+CMD ["streamlit", "run", "ontology_graph/ui/app.py", "--server.address=0.0.0.0", "--server.port=8503", "--client.toolbarMode=minimal"]

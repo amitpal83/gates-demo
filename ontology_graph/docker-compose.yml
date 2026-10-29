@@ -1,0 +1,99 @@
+# LIC pipeline services; merged with the base stack, so run from the repo root:
+#   docker compose -f rag_ingestion/docker-compose.yml -f ontology_graph/docker-compose.yml up -d --build graphdb policy-postgres lic-webhook lic-minio-init lic-ui
+# Relative paths below resolve against rag_ingestion/ (the first -f file's directory). See ontology_graph/README.md.
+
+services:
+  graphdb:
+    image: ${GRAPHDB_IMAGE:-ontotext/graphdb:10.6.4}
+    environment:
+      GDB_JAVA_OPTS: ${GRAPHDB_JAVA_OPTS:--Xms1g -Xmx2g}
+    ports:
+      - "127.0.0.1:7200:7200"  # Workbench; localhost only -- reach it with an SSH tunnel
+    volumes:
+      - graphdb_data:/opt/graphdb/home
+
+  policy-postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: lic_policies
+      POSTGRES_USER: lic
+      POSTGRES_PASSWORD: ${LIC_POSTGRES_PASSWORD:?set LIC_POSTGRES_PASSWORD in rag_ingestion/.env}
+    volumes:
+      - lic_pgdata:/var/lib/postgresql/data
+      - ../ontology_graph/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lic -d lic_policies"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  lic-webhook:
+    build:
+      context: ..
+      dockerfile: ontology_graph/docker/Dockerfile.webhook
+    environment:
+      AIRFLOW_API_URL: http://airflow-webserver:8080
+      AIRFLOW_API_USERNAME: ${AIRFLOW_API_USERNAME}
+      AIRFLOW_API_PASSWORD: ${AIRFLOW_API_PASSWORD}
+      LIC_DAG_ID: lic_policy_ingestion
+      LIC_WEBHOOK_SHARED_SECRET: ${LIC_WEBHOOK_SHARED_SECRET:-${RAG_WEBHOOK_SHARED_SECRET}}
+    expose:
+      - "8091"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8091/health')"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # One-shot: creates licdocuments/, registers a second MinIO webhook target and the licdocuments/*.pdf event rule. Restarts MinIO once.
+  lic-minio-init:
+    image: quay.io/minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+      lic-webhook:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_BUCKET: ${MINIO_BUCKET}
+      LIC_WEBHOOK_SHARED_SECRET: ${LIC_WEBHOOK_SHARED_SECRET:-${RAG_WEBHOOK_SHARED_SECRET}}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >
+        until mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD"; do
+          echo "waiting for minio...";
+          sleep 2;
+        done &&
+        mc mb --ignore-existing local/$$MINIO_BUCKET &&
+        printf '' | mc pipe local/$$MINIO_BUCKET/licdocuments/.keep &&
+        mc admin config set local notify_webhook:licwebhook endpoint="http://lic-webhook:8091/minio-event" auth_token="$$LIC_WEBHOOK_SHARED_SECRET" &&
+        mc --json admin service restart local &&
+        sleep 5 &&
+        (mc event add local/$$MINIO_BUCKET arn:minio:sqs::licwebhook:webhook --prefix licdocuments/ --suffix .pdf --event put || echo "event rule may already exist")
+
+  lic-ui:
+    build:
+      context: ..
+      dockerfile: ontology_graph/docker/Dockerfile.ui
+    ports:
+      - "8503:8503"
+    environment:
+      QDRANT_URL: http://qdrant:6333
+      GRAPHDB_URL: http://graphdb:7200
+      POLICY_DB_HOST: policy-postgres
+      POLICY_DB_PASSWORD: ${LIC_POSTGRES_PASSWORD}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      LIC_LLM_MODEL: ${LIC_LLM_MODEL:-gpt-4o-mini}
+      LIC_LLM_DEFAULT_HEADERS: ${LIC_LLM_DEFAULT_HEADERS:-}
+    depends_on:
+      policy-postgres:
+        condition: service_healthy
+      graphdb:
+        condition: service_started
+      qdrant:
+        condition: service_started
+
+volumes:
+  graphdb_data:
+  lic_pgdata:

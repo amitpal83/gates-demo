@@ -1,0 +1,12 @@
+# Build context is the repo root (see ontology_graph/docker-compose.yml).
+FROM python:3.11-slim
+
+WORKDIR /app
+
+RUN pip install --no-cache-dir fastapi "uvicorn[standard]" httpx
+
+COPY ontology_graph /app/ontology_graph
+ENV PYTHONPATH=/app
+
+EXPOSE 8091
+CMD ["uvicorn", "ontology_graph.webhook.app:app", "--host", "0.0.0.0", "--port", "8091"]
