@@ -34,10 +34,11 @@ except Exception as e:
     st.stop()
 
 question = st.text_input(
-    "Ask a question about an ingested document",
-    placeholder="e.g. What is the budget in the policy documents owned by DOST?",
+    "Question",
+    placeholder="e.g. Ask any query about the Policy Productions",
+    label_visibility="collapsed",
 )
-st.caption("Tip: mention things like `type: policy`, `author: ...`, or `owner: ...` to filter by metadata.")
+st.caption("Tip: mention things like `type: policy name` to filter by metadata.")
 
 if st.button("Run"):
     if not question.strip():
