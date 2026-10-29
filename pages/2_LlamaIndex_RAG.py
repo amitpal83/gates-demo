@@ -35,7 +35,7 @@ except Exception as e:
 
 question = st.text_input(
     "Question",
-    placeholder="e.g. Ask any query about the Policy Productions",
+    placeholder="e.g. Ask any query about the Policy Product",
     label_visibility="collapsed",
 )
 st.caption("Tip: mention things like `type: policy name` to filter by metadata.")
