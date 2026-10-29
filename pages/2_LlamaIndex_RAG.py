@@ -11,15 +11,9 @@ from rag_ingestion.query_engine import LlamaIndexRAGQuery
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-st.set_page_config(page_title="LlamaIndex RAG", layout="wide")
-st.title("LlamaIndex RAG")
-st.caption(
-    "Ask questions about PDFs ingested through the Airflow pipeline (MinIO -> LlamaParse -> "
-    "LlamaIndex chunking -> metadata/safety gates -> embeddings -> Qdrant)"
-)
-st.caption(
-    "Pipeline"
-)
+st.set_page_config(page_title="Policy Data Query Agent", layout="wide")
+st.title("Policy Data Query Agent")
+st.caption("Ask any details about your policy")
 
 
 def get_query_agent() -> LlamaIndexRAGQuery:
@@ -38,8 +32,6 @@ except Exception as e:
         "Check QDRANT_URL and that `docker compose -f rag_ingestion/docker-compose.yml up -d` is running."
     )
     st.stop()
-
-st.caption(f"Querying Qdrant collection: `{agent.collection_name}`")
 
 question = st.text_input(
     "Ask a question about an ingested document",
