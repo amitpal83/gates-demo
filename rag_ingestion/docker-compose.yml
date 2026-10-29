@@ -159,6 +159,28 @@ services:
     depends_on:
       - qdrant
 
+  # RAG-only UI on its own port; same image/env as `streamlit`, but serves only the LlamaIndex RAG page.
+  streamlit-rag:
+    build:
+      context: ..
+      dockerfile: rag_ingestion/docker/Dockerfile.streamlit
+    command: ["streamlit", "run", "rag_app.py", "--server.address=0.0.0.0", "--server.port=8502", "--client.toolbarMode=minimal"]
+    ports:
+      - "8502:8502"
+    environment:
+      QDRANT_URL: http://qdrant:6333
+      QDRANT_COLLECTION: gates_rag_docs
+      QDRANT_COLLECTION_DEV: gates_rag_docs_dev384
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      EMBEDDING_MODEL: text-embedding-3-large
+      EMBEDDING_DIMENSIONS: "1024"
+      LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY}
+      LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY}
+      LANGFUSE_HOST: ${LANGFUSE_HOST:-https://cloud.langfuse.com}
+      GATES_ENV: ${GATES_ENV:-development}
+    depends_on:
+      - qdrant
+
 volumes:
   minio_data:
   qdrant_data:
