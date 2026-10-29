@@ -7,13 +7,13 @@ def _bool_env(name: str, default: bool) -> bool:
     return default if raw is None else raw.strip().lower() in ("1", "true", "yes", "on")
 
 
-# -- MinIO (shared server; LIC uses its own licdocuments/ and lic/ prefixes) --
+# -- MinIO (shared server; LIC uses its own buckets) --
 MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "localhost:9000")
 MINIO_ROOT_USER = os.getenv("MINIO_ROOT_USER")
 MINIO_ROOT_PASSWORD = os.getenv("MINIO_ROOT_PASSWORD")
-MINIO_BUCKET = os.getenv("MINIO_BUCKET", "gates-rag-ingestion")
 MINIO_SECURE = _bool_env("MINIO_SECURE", False)
-UPLOAD_PREFIX = "licdocuments/"
+UPLOAD_BUCKET = os.getenv("LIC_UPLOAD_BUCKET", "licdocuments")  # PDFs dropped here trigger the pipeline
+STAGING_BUCKET = os.getenv("LIC_STAGING_BUCKET", "lic-pipeline")  # parsed/chunked/ontology files; kept apart so staged PDFs never re-trigger the event
 
 # -- Qdrant --
 QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")

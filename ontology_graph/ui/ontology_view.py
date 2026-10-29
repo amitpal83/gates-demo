@@ -45,7 +45,7 @@ def render() -> None:
     st.download_button("Download schema (Turtle)", schema.to_turtle(), file_name="lic_schema.ttl", mime="text/turtle")
 
     st.subheader("Extracted from ingested documents")
-    st.caption("Reads GraphDB. Upload a PDF to licdocuments/ in MinIO and wait for the lic_policy_ingestion DAG to finish.")
+    st.caption("Reads GraphDB. Upload a PDF to the licdocuments bucket in MinIO and wait for the lic_policy_ingestion DAG to finish.")
     try:
         counts = graphdb.select(
             _PREFIX + f'SELECT ?cls (COUNT(DISTINCT ?s) AS ?n) WHERE {{ ?s a ?cls . FILTER(STRSTARTS(STR(?s), "{schema.DATA_NS}")) '

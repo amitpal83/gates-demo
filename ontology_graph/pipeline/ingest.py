@@ -18,13 +18,20 @@ _OVERLAP_CHARS = 250
 
 
 def run_stage(conf: dict) -> dict:
-    """conf: {bucket, object_key, etag} from the DAG run."""
-    bucket = conf.get("bucket") or config.MINIO_BUCKET
+    """conf: {bucket, object_key, etag} from the DAG run (the upload bucket); every later stage works in the staging bucket."""
+    source_bucket = conf.get("bucket") or config.UPLOAD_BUCKET
     object_key, etag = conf["object_key"], conf["etag"]
     doc_id = compute_doc_id(object_key, etag)
     raw_key = stage_key("raw", doc_id, "source.pdf")
-    minio_store.copy(bucket, object_key, raw_key)
-    return {"bucket": bucket, "object_key": object_key, "etag": etag, "doc_id": doc_id, "raw_key": raw_key}
+    minio_store.copy(source_bucket, object_key, config.STAGING_BUCKET, raw_key)
+    return {
+        "bucket": config.STAGING_BUCKET,
+        "source_bucket": source_bucket,
+        "object_key": object_key,
+        "etag": etag,
+        "doc_id": doc_id,
+        "raw_key": raw_key,
+    }
 
 
 def _join_pages(pages: list[str]) -> str:

@@ -48,5 +48,8 @@ def put_json(bucket: str, key: str, obj) -> None:
     put_text(bucket, key, json.dumps(obj, indent=2), "application/json")
 
 
-def copy(bucket: str, src_key: str, dst_key: str) -> None:
-    get_client().copy_object(bucket, dst_key, CopySource(bucket, src_key))
+def copy(src_bucket: str, src_key: str, dst_bucket: str, dst_key: str) -> None:
+    client = get_client()
+    if not client.bucket_exists(dst_bucket):
+        client.make_bucket(dst_bucket)
+    client.copy_object(dst_bucket, dst_key, CopySource(src_bucket, src_key))

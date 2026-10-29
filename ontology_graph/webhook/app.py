@@ -1,4 +1,4 @@
-"""Turns a MinIO s3:ObjectCreated event under licdocuments/ into a lic_policy_ingestion DAG run; internal-only, with a shared-secret check as defense-in-depth."""
+"""Turns a MinIO s3:ObjectCreated event in the licdocuments bucket into a lic_policy_ingestion DAG run; internal-only, with a shared-secret check as defense-in-depth."""
 from __future__ import annotations
 
 import logging
@@ -61,8 +61,8 @@ async def minio_event(request: Request, authorization: str | None = Header(defau
         if not bucket or not object_key:
             logger.warning("Skipping malformed MinIO event record: %r", record)
             continue
-        if not (object_key.startswith(config.UPLOAD_PREFIX) and object_key.lower().endswith(".pdf")):
-            logger.info("Ignoring %s (outside %s*.pdf).", object_key, config.UPLOAD_PREFIX)
+        if not (bucket == config.UPLOAD_BUCKET and object_key.lower().endswith(".pdf")):
+            logger.info("Ignoring %s/%s (not a PDF in the %s bucket).", bucket, object_key, config.UPLOAD_BUCKET)
             continue
         triggered.append(_trigger_dag_run(bucket, object_key, etag))
 

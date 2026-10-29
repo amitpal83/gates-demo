@@ -45,7 +45,7 @@ services:
       timeout: 3s
       retries: 10
 
-  # One-shot: creates licdocuments/, registers a second MinIO webhook target and the licdocuments/*.pdf event rule. Restarts MinIO once.
+  # One-shot, safe to re-run: creates the licdocuments and lic-pipeline buckets, registers a MinIO webhook target (restarting MinIO only if it is new) and the *.pdf event rule on licdocuments.
   lic-minio-init:
     image: quay.io/minio/mc:latest
     depends_on:
@@ -56,7 +56,8 @@ services:
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
-      MINIO_BUCKET: ${MINIO_BUCKET}
+      LIC_UPLOAD_BUCKET: ${LIC_UPLOAD_BUCKET:-licdocuments}
+      LIC_STAGING_BUCKET: ${LIC_STAGING_BUCKET:-lic-pipeline}
       LIC_WEBHOOK_SHARED_SECRET: ${LIC_WEBHOOK_SHARED_SECRET:-${RAG_WEBHOOK_SHARED_SECRET}}
     entrypoint: ["/bin/sh", "-c"]
     command:
@@ -65,12 +66,13 @@ services:
           echo "waiting for minio...";
           sleep 2;
         done &&
-        mc mb --ignore-existing local/$$MINIO_BUCKET &&
-        printf '' | mc pipe local/$$MINIO_BUCKET/licdocuments/.keep &&
-        mc admin config set local notify_webhook:licwebhook endpoint="http://lic-webhook:8091/minio-event" auth_token="$$LIC_WEBHOOK_SHARED_SECRET" &&
-        mc --json admin service restart local &&
-        sleep 5 &&
-        (mc event add local/$$MINIO_BUCKET arn:minio:sqs::licwebhook:webhook --prefix licdocuments/ --suffix .pdf --event put || echo "event rule may already exist")
+        mc mb --ignore-existing local/$$LIC_UPLOAD_BUCKET &&
+        mc mb --ignore-existing local/$$LIC_STAGING_BUCKET &&
+        (mc admin config get local notify_webhook:licwebhook | grep -q "enable=on" && echo "licwebhook target already configured" ||
+          (mc admin config set local notify_webhook:licwebhook endpoint="http://lic-webhook:8091/minio-event" auth_token="$$LIC_WEBHOOK_SHARED_SECRET" &&
+           mc --json admin service restart local &&
+           sleep 5)) &&
+        (mc event add local/$$LIC_UPLOAD_BUCKET arn:minio:sqs::licwebhook:webhook --suffix .pdf --event put || echo "event rule may already exist")
 
   lic-ui:
     build:

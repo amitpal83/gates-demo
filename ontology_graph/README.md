@@ -1,9 +1,9 @@
 # ontology_graph — LIC policy pipeline
 
-Self-contained and independent of `gates_ai_common` and `rag_ingestion`. Drop a PDF into the MinIO `licdocuments/` folder and:
+Self-contained and independent of `gates_ai_common` and `rag_ingestion`. Drop a PDF into the MinIO `licdocuments` bucket and:
 
 ```
-MinIO licdocuments/*.pdf
+MinIO bucket licdocuments (*.pdf; working files go to bucket lic-pipeline)
   -> lic-webhook -> Airflow DAG lic_policy_ingestion
        stage -> parse (LlamaParse) -> chunk -+-> build_ontology -> GraphDB (repository lic_policy)
                                              +-> embed -> Qdrant (collection lic_policy_docs)
@@ -46,13 +46,13 @@ docker compose -f rag_ingestion/docker-compose.yml -f ontology_graph/docker-comp
   up -d --build graphdb policy-postgres lic-webhook lic-minio-init lic-ui
 ```
 
-`lic-minio-init` restarts MinIO once to register the second webhook target. The existing `incoming/` flow is unchanged.
+`lic-minio-init` creates the `licdocuments` and `lic-pipeline` buckets and the event rule, and restarts MinIO only if the webhook target is new. The existing `gates-rag-ingestion` bucket and `incoming/` flow are untouched. Re-running it is safe.
 
 Services: GraphDB Workbench on `127.0.0.1:7200` (use `ssh -L 7200:localhost:7200 ...`), the UI on port `8503` (open it in the security group), PostgreSQL internal only.
 
 ## Try it
 
-1. Upload the LIC PDF to `licdocuments/` in the MinIO console (port 9001).
+1. Upload the LIC PDF to the `licdocuments` bucket in the MinIO console (port 9001).
 2. Watch `lic_policy_ingestion` in the Airflow UI (port 8080) until it is green.
 3. Open the UI, tab **Ontology**, to see the extracted ontology; use the GraphDB Workbench for SPARQL and the class hierarchy.
 4. Tab **Ask about a policy**: pick `LIC-NP-0001` and ask, for example, "Can I withdraw part of my fund now?"
