@@ -1,49 +1,61 @@
 -- FICTIONAL demo data only: the names, dates and amounts below do not describe real people or policies.
--- Runs once, when the policy-postgres volume is first created.
+-- Idempotent: safe to run on a fresh volume (docker-entrypoint-initdb.d) and by hand on an existing one:
+--   docker compose ... exec -T policy-postgres psql -U lic -d lic_policies < ontology_graph/postgres/init.sql
+-- It replaces the earlier Nivesh Plus demo tables.
 
-CREATE TABLE policies (
-    policy_number                TEXT PRIMARY KEY,
-    holder_name                  TEXT NOT NULL,
-    date_of_birth                DATE NOT NULL,
-    age_at_entry                 INTEGER NOT NULL,
-    plan_uin                     TEXT NOT NULL,
-    plan_name                    TEXT NOT NULL,
-    sum_assured_option           SMALLINT NOT NULL CHECK (sum_assured_option IN (1, 2)),
-    basic_sum_assured            NUMERIC(14, 2) NOT NULL,
-    single_premium               NUMERIC(14, 2) NOT NULL,
-    sale_channel                 TEXT NOT NULL CHECK (sale_channel IN ('offline', 'online')),
-    policy_term_years            INTEGER NOT NULL,
-    fund_name                    TEXT NOT NULL,
-    commencement_date            DATE NOT NULL,
-    maturity_date                DATE NOT NULL,
-    status                       TEXT NOT NULL,
-    nominee_name                 TEXT,
-    nominee_relationship         TEXT,
-    rider_opted                  BOOLEAN NOT NULL DEFAULT FALSE,
-    accident_benefit_sum_assured NUMERIC(14, 2),
-    units_held                   NUMERIC(16, 4) NOT NULL,
-    last_nav                     NUMERIC(10, 4) NOT NULL,
-    unit_fund_value              NUMERIC(14, 2) NOT NULL,
-    valuation_date               DATE NOT NULL
+DROP TABLE IF EXISTS policy_transactions CASCADE;
+DROP TABLE IF EXISTS policies CASCADE;
+DROP TABLE IF EXISTS customer_policy CASCADE;
+DROP TABLE IF EXISTS installment_master CASCADE;
+DROP TABLE IF EXISTS customers CASCADE;
+
+CREATE TABLE customers (
+    customer_id   TEXT PRIMARY KEY,
+    full_name     TEXT NOT NULL,
+    date_of_birth DATE NOT NULL,
+    city          TEXT NOT NULL
 );
 
-CREATE TABLE policy_transactions (
-    id            SERIAL PRIMARY KEY,
-    policy_number TEXT NOT NULL REFERENCES policies (policy_number),
-    txn_date      DATE NOT NULL,
-    txn_type      TEXT NOT NULL,
-    amount_inr    NUMERIC(14, 2),
-    note          TEXT
+-- Valid mode codes only. What each code means is deliberately NOT stored here (as in many legacy systems); it lives in the plan ontology.
+CREATE TABLE installment_master (
+    mode_code SMALLINT PRIMARY KEY,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE
 );
 
-INSERT INTO policies VALUES
-    ('LIC-NP-0001', 'Asha Verma', '1995-04-12', 26, '512L317V02', 'LIC''s Nivesh Plus', 2, 1250000.00, 125000.00, 'offline', 20,
-     'Balanced Fund', '2021-03-15', '2041-03-15', 'In force', 'Rahul Verma', 'Spouse', FALSE, NULL,
-     9480.2150, 17.8520, 169240.80, '2026-10-28'),
-    ('LIC-NP-0002', 'Rohan Mehta', '1988-09-02', 36, '512L317V02', 'LIC''s Nivesh Plus', 1, 375000.00, 300000.00, 'online', 15,
-     'Growth Fund', '2024-08-01', '2039-08-01', 'In force', 'Meera Mehta', 'Spouse', TRUE, 375000.00,
-     21350.5000, 14.9120, 318378.66, '2026-10-28');
+CREATE TABLE customer_policy (
+    policy_number             TEXT PRIMARY KEY,
+    customer_id               TEXT NOT NULL REFERENCES customers (customer_id),
+    plan_uin                  TEXT NOT NULL,
+    plan_name                 TEXT NOT NULL,
+    installment_premium       NUMERIC(12, 2) NOT NULL,
+    mode_code                 SMALLINT NOT NULL REFERENCES installment_master (mode_code),
+    premium_paying_term_years INTEGER NOT NULL,
+    policy_term_years         INTEGER NOT NULL,
+    basic_sum_assured         NUMERIC(14, 2) NOT NULL,
+    start_date                DATE NOT NULL,
+    last_paid_date            DATE NOT NULL,
+    status                    TEXT NOT NULL
+);
 
-INSERT INTO policy_transactions (policy_number, txn_date, txn_type, amount_inr, note) VALUES
-    ('LIC-NP-0001', '2023-09-04', 'switch', NULL, 'Growth Fund to Secured Fund'),
-    ('LIC-NP-0001', '2026-05-20', 'switch', NULL, 'Secured Fund to Balanced Fund');
+COMMENT ON COLUMN customer_policy.installment_premium IS 'Amount in rupees paid at each installment';
+COMMENT ON COLUMN customer_policy.mode_code IS 'Number of installments per year';
+COMMENT ON COLUMN customer_policy.premium_paying_term_years IS 'Number of years for which premiums are paid';
+COMMENT ON COLUMN customer_policy.policy_term_years IS 'Number of years the cover runs';
+COMMENT ON COLUMN customer_policy.start_date IS 'Date the policy commenced; the first installment was paid on this date';
+COMMENT ON COLUMN customer_policy.last_paid_date IS 'Due date of the most recent installment paid';
+
+INSERT INTO installment_master (mode_code, is_active) VALUES (1, TRUE), (3, TRUE), (6, TRUE), (12, TRUE);
+
+INSERT INTO customers (customer_id, full_name, date_of_birth, city) VALUES
+    ('CUST-001', 'Anita Rao',      '1989-03-20', 'Pune'),
+    ('CUST-002', 'Vikram Shah',    '1982-03-12', 'Ahmedabad'),
+    ('CUST-003', 'Neha Kulkarni',  '1995-03-25', 'Nagpur'),
+    ('CUST-004', 'Imran Qureshi',  '1986-03-08', 'Hyderabad');
+
+-- All four: annualized premium 60,000, premium paying term 10, policy term 20, started 1 Apr 2024, so the truth is 6,00,000 over the paying term.
+INSERT INTO customer_policy
+    (policy_number, customer_id, plan_uin, plan_name, installment_premium, mode_code, premium_paying_term_years, policy_term_years, basic_sum_assured, start_date, last_paid_date, status) VALUES
+    ('DEMO-0001', 'CUST-001', '512L361V01', 'LIC''s Protection Plus', 60000.00,  1, 10, 20,  600000.00, '2024-04-01', '2026-04-01', 'In force'),
+    ('DEMO-0002', 'CUST-002', '512L361V01', 'LIC''s Protection Plus', 30000.00,  6, 10, 20,  600000.00, '2024-04-01', '2026-10-01', 'In force'),
+    ('DEMO-0003', 'CUST-003', '512L361V01', 'LIC''s Protection Plus', 15000.00,  3, 10, 20,  900000.00, '2024-04-01', '2026-10-01', 'In force'),
+    ('DEMO-0004', 'CUST-004', '512L361V01', 'LIC''s Protection Plus',  5000.00, 12, 10, 20,  600000.00, '2024-04-01', '2026-10-01', 'In force');

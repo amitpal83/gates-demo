@@ -63,6 +63,9 @@ def run(prev: dict) -> dict:
     entities, relations, dropped = facts.merge_batches(batches)
     if not entities:
         raise RuntimeError(f"No ontology entities could be extracted for {doc_id}.")
+    facts.apply_mode_codes(entities)
+    relations = facts.link_structure(entities, relations)
+    facts.validate_compact(entities, relations)
     turtle = facts.to_turtle(entities, relations)
 
     ontology_key = stage_key("ontology", doc_id, "ontology.ttl")

@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Starts everything the LIC demo needs in one go (MinIO, Qdrant, Airflow, GraphDB, PostgreSQL, webhook, UI). Run on the EC2 box:
-#   bash ontology_graph/deploy.sh [up|status|down] [--pull]
-#   up      (default) build and start everything, re-run the idempotent MinIO bucket/event setup, then verify
-#   status  show the state of the services this demo uses
-#   down    stop only the LIC services (MinIO, Qdrant and Airflow keep running; they are shared)
+#   bash ontology_graph/deploy.sh [up|status|down|db-reset] [--pull]
+#   up        (default) build and start everything, re-run the idempotent MinIO bucket/event setup, then verify
+#   status    show the state of the services this demo uses
+#   down      stop only the LIC services (MinIO, Qdrant and Airflow keep running; they are shared)
+#   db-reset  re-create the demo PostgreSQL tables and seed data from postgres/init.sql (replaces any existing demo data)
 #   --pull  git pull --ff-only first
 set -euo pipefail
 
@@ -12,16 +13,16 @@ cd "$ROOT"
 
 COMPOSE=(docker compose -f rag_ingestion/docker-compose.yml -f ontology_graph/docker-compose.yml)
 INFRA=(minio qdrant airflow-webserver airflow-scheduler)
-LIC=(graphdb policy-postgres lic-webhook lic-ui)
+LIC=(graphdb policy-postgres lic-webhook demo-api)
 ENV_FILE="rag_ingestion/.env"
 
 ACTION="up"
 PULL=0
 for arg in "$@"; do
   case "$arg" in
-    up|status|down) ACTION="$arg" ;;
+    up|status|down|db-reset) ACTION="$arg" ;;
     --pull) PULL=1 ;;
-    *) echo "Unknown argument: $arg (use: up | status | down | --pull)" >&2; exit 2 ;;
+    *) echo "Unknown argument: $arg (use: up | status | down | db-reset | --pull)" >&2; exit 2 ;;
   esac
 done
 
@@ -59,7 +60,7 @@ show_urls() {
   cat <<'EOF'
 
 Where to look
-  Policy Data Query Agent   http://<ec2-host>:8503
+  Demo API / web app        http://<ec2-host>:8504   (/api/health, /api/policies, /api/ontology)
   Airflow UI                http://<ec2-host>:8080
   MinIO console             http://<ec2-host>:9001   (upload PDFs to the "licdocuments" bucket)
   GraphDB Workbench         http://localhost:7200    (ssh -L 7200:localhost:7200 ubuntu@<ec2-host>)
@@ -75,6 +76,14 @@ case "$ACTION" in
   down)
     log "Stopping LIC services (shared MinIO / Qdrant / Airflow stay up)"
     "${COMPOSE[@]}" stop "${LIC[@]}"
+    exit 0
+    ;;
+  db-reset)
+    log "Re-creating the demo tables and seed data (drops customers, installment_master, customer_policy and the old Nivesh Plus tables)"
+    "${COMPOSE[@]}" up -d policy-postgres
+    wait_for "policy-postgres healthy" 60 is_healthy policy-postgres
+    "${COMPOSE[@]}" exec -T policy-postgres psql -v ON_ERROR_STOP=1 -U lic -d lic_policies < ontology_graph/postgres/init.sql
+    "${COMPOSE[@]}" exec -T policy-postgres psql -U lic -d lic_policies -c "SELECT policy_number, mode_code, installment_premium FROM customer_policy ORDER BY 1"
     exit 0
     ;;
 esac

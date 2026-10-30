@@ -11,6 +11,8 @@ gates_ai_common/observability.log
 htmlcov/
 build/
 dist/
+node_modules/
+ontology_graph/static/
 *.egg-info/
 
 # Terraform state/artifacts (deploy/rag_ingestion_aws)

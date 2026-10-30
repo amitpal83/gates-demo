@@ -20,4 +20,6 @@ deploy/rag_ingestion_aws/.terraform/
 deploy/rag_ingestion_aws/terraform.tfstate*
 rag_ingestion/docker/
 .env
+**/node_modules/
+ontology_graph/static/
 gates_ai_common/observability.log

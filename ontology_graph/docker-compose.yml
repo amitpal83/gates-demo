@@ -98,6 +98,28 @@ services:
       qdrant:
         condition: service_started
 
+  # Backend (and, once built, the React app) for the ontology-vs-SQL demo.
+  demo-api:
+    build:
+      context: ..
+      dockerfile: ontology_graph/docker/Dockerfile.api
+    ports:
+      - "8504:8504"
+    environment:
+      GRAPHDB_URL: http://graphdb:7200
+      GRAPHDB_USER: ${GRAPHDB_USER:-}
+      GRAPHDB_PASSWORD: ${GRAPHDB_PASSWORD:-}
+      POLICY_DB_HOST: policy-postgres
+      POLICY_DB_PASSWORD: ${LIC_POSTGRES_PASSWORD}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      LIC_LLM_MODEL: ${LIC_LLM_MODEL:-gpt-4o-mini}
+      LIC_LLM_DEFAULT_HEADERS: ${LIC_LLM_DEFAULT_HEADERS:-}
+    depends_on:
+      policy-postgres:
+        condition: service_healthy
+      graphdb:
+        condition: service_started
+
   # Airflow runs the DAG tasks in the scheduler (LocalExecutor); these credentials let build_ontology_task write to GraphDB once security is on.
   airflow-scheduler:
     environment:

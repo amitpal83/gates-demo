@@ -1,0 +1,20 @@
+# Build context is the repo root (see ontology_graph/docker-compose.yml). Stage 1 builds the React app; stage 2 serves it plus the API from one container.
+FROM node:20-alpine AS web
+WORKDIR /web
+COPY ontology_graph/web/package*.json ./
+RUN npm install --no-audit --no-fund
+COPY ontology_graph/web/ ./
+RUN npm run build
+
+FROM python:3.11-slim
+
+WORKDIR /app
+
+RUN pip install --no-cache-dir fastapi "uvicorn[standard]" httpx openai psycopg2-binary
+
+COPY ontology_graph /app/ontology_graph
+COPY --from=web /web/dist /app/ontology_graph/static
+ENV PYTHONPATH=/app
+
+EXPOSE 8504
+CMD ["uvicorn", "ontology_graph.demo_api.app:app", "--host", "0.0.0.0", "--port", "8504"]

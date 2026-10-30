@@ -1,43 +1,53 @@
-"""Prompt templates as plain constants (no prompt library); swap for a managed prompt store later if wanted."""
+"""Prompt templates as plain constants (no prompt library). The two answer prompts are identical except for the ontology block, so the only variable in the demo is whether the ontology is available."""
 from __future__ import annotations
 
 from ontology_graph.ontology import schema
 
-_EXTRACTION_SYSTEM = """You extract a knowledge graph from an insurance plan brochure. Use ONLY the classes, relations and data properties below; ignore anything that does not fit.
+_EXTRACTION_SYSTEM = """You extract a very small knowledge graph from a life-insurance plan brochure. Use ONLY the classes, relations and data properties below.
 
 __SCHEMA__
 
 Return a JSON object: {"entities": [{"id": "snake_case_id", "class": "<Class>", "label": "<name as written>", "props": {"<dataProperty>": <value>}}], "relations": [{"s": "<entity id>", "p": "<relation>", "o": "<entity id>"}]}
 
+What to extract:
+- one Insurer (id "lic" for Life Insurance Corporation of India).
+- one Plan: its name, uin, planNumber, the allowed premium paying terms and policy terms (as text lists such as "5, 7, 10, 15"), and lockInYears (the years before partial withdrawal or surrender is allowed).
+- one PremiumMode for EACH way the brochure says premium can be paid (for example yearly, half-yearly, quarterly, monthly): installmentsPerYear, intervalMonths, graceDays (the grace period for that mode, in days), and the minimum installment in rupees (minInstallmentInr for premium paying terms of 5, 7 and 10 years; minInstallmentInrPpt15 for 15 years). Put anything special about the mode, such as "NACH only", in "description".
+- one Benefit: the Death Benefit, with payoutMode (how it can be paid), minPctOfPremiumsPaid (the percentage-of-premiums-paid floor) and a one-line description of the amounts it is the highest of.
+- ids are lowercase snake_case: the plan from its name, modes as "yearly", "half_yearly", "quarterly", "monthly", the benefit as "death_benefit".
+
 Rules:
-- ids are lowercase snake_case and stable (for example "nivesh_plus", "balanced_fund", "mortality_charge"); reuse an id from the known list rather than inventing a second one for the same thing.
-- one entity per distinct thing: one per fund, per charge (separate entities when the rate depends on a condition, such as offline versus online allocation charge), per guaranteed-addition row, per withdrawal band, per sum assured option.
-- numeric props are plain numbers (3.3, not "3.30%"); put the unit in "unit" and any condition in "condition".
-- the plan itself is a Plan entity with its "uin"; link it to everything it offers or charges with the relations above.
-- include only facts stated in the passages; never guess or use outside knowledge.
-- every relation must reference ids that exist in this response or in the known list."""
+- numeric props are plain numbers (60000, not "Rs 60,000"); do NOT output modeCode, and do not output grace-period or lock-in entities (they are built from graceDays and lockInYears).
+- include only facts stated in the passages; never guess or use outside knowledge; omit a prop you cannot find.
+- ignore everything else in the brochure (funds, charges, maturity benefit, riders, top-up, withdrawals, switching).
+- reuse an id from the known list rather than inventing a second one for the same thing."""
 
 EXTRACTION_USER = "Known entity ids so far: {known_ids}\n\nPassages:\n{passages}"
 
-ANSWER_SYSTEM = """You answer questions about ONE customer's life-insurance policy using only the material provided: that customer's policy record, structured facts from the plan ontology, and numbered passages from the plan brochure.
+# Both agents get the same instructions and the same record; Agent A additionally gets the ontology block.
+ANSWER_SYSTEM = """You answer questions about ONE customer's life-insurance policy using only the information provided below.
+
+Return a JSON object with exactly these keys:
+{{"payments_per_year": <integer or null>, "installment_amount_inr": <number or null>, "total_premium_over_paying_term_inr": <number or null>, "next_due_date": "<YYYY-MM-DD or null>", "grace_period_days": <integer or null>, "answer": "<one or two sentences answering the question, with the working>"}}
 
 Rules:
-- Ground every statement in the material; if the answer is not there, say so plainly rather than guessing.
-- Combine the customer's own details (dates, option, fund, premium) with the plan rules. Work out dates and amounts explicitly when the question needs it, using today's date: {today}.
-- Cite sources inline as [record], [ontology] or [1], [2] for the numbered passages.
-- Never mention or infer anything about other customers.
-- Be concise and use rupee amounts as written in the sources."""
+- Use only the information provided; do not use outside knowledge about the plan. If a value cannot be determined from it, use null for that key and say what is missing in "answer".
+- Today's date is {today}.
+- Never mention other customers."""
 
-ANSWER_USER = """POLICY RECORD:
+ANSWER_USER_RECORD = """POLICY RECORD (from the customer database):
 {record}
 
-ONTOLOGY FACTS:
+COLUMN DESCRIPTIONS (data dictionary of the database):
+{notes}
+"""
+
+ANSWER_USER_ONTOLOGY = """
+PLAN ONTOLOGY FACTS (authoritative; where they differ from the column descriptions, they win):
 {facts}
+"""
 
-BROCHURE PASSAGES:
-{passages}
-
-QUESTION: {question}"""
+ANSWER_USER_QUESTION = "\nQUESTION: {question}"
 
 
 def extraction_system() -> str:

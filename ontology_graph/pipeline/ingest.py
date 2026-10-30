@@ -74,6 +74,11 @@ def run_parse(prev: dict) -> dict:
             print(f"LlamaParse failed ({error}); falling back to pypdf.")
     if pages is None:
         pages = _parse_pypdf(pdf_bytes)
+    if not "".join(pages).strip():
+        raise RuntimeError(
+            f"No text could be read from {prev.get('object_key')} (parser: {backend}); "
+            "an image-only PDF needs LlamaParse (set LLAMA_CLOUD_API_KEY)."
+        )
 
     parsed_key = stage_key("parsed", doc_id, "parsed.md")
     minio_store.put_text(bucket, parsed_key, _join_pages(pages), "text/markdown")
