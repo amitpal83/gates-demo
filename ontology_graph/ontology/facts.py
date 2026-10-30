@@ -160,7 +160,12 @@ def validate_compact(entities: dict, relations: list[tuple[str, str, str]]) -> N
     if missing:
         raise RuntimeError(f"No graceDays extracted for modes: {missing}.")
     if len(entities) > sum(schema.CLASS_CAPS.values()):
-        raise RuntimeError(f"Graph has {len(entities)} nodes, over the {sum(schema.CLASS_CAPS.values())} allowed.")
+        counts = dict(Counter(e["class"] for e in entities.values()))
+        grace = {entities[s]["label"]: entities[o]["props"].get("days") for s, p, o in relations if p == "hasGracePeriod"}
+        raise RuntimeError(
+            f"Graph has {len(entities)} nodes, over the {sum(schema.CLASS_CAPS.values())} allowed; "
+            f"nodes per class {counts}; grace days by mode {grace}."
+        )
 
 
 def _literal(value, xsd: str) -> str:

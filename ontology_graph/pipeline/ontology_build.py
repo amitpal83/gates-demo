@@ -65,6 +65,15 @@ def run(prev: dict) -> dict:
         raise RuntimeError(f"No ontology entities could be extracted for {doc_id}.")
     facts.apply_mode_codes(entities)
     relations = facts.link_structure(entities, relations)
+    try:  # saved before validation so a failed run can still be inspected in MinIO
+        minio_store.put_json(bucket, stage_key("ontology", doc_id, "extraction_debug.json"), {
+            "raw_llm_batches": batches,
+            "entities": entities,
+            "relations": relations,
+            "dropped": dropped,
+        })
+    except Exception:
+        logger.warning("Could not save the extraction debug file.", exc_info=True)
     facts.validate_compact(entities, relations)
     turtle = facts.to_turtle(entities, relations)
 
