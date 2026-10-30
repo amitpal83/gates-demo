@@ -44,6 +44,7 @@ def merge_batches(batches: list[dict]) -> tuple[dict, list[tuple[str, str, str]]
     """Returns (entities by id, sorted unique (s, p, o) relations, counts of what was dropped and why)."""
     entities: dict[str, dict] = {}
     dropped: Counter = Counter()
+    conflicts: list[str] = []
 
     for batch in batches:
         for raw in batch.get("entities") or []:
@@ -57,8 +58,10 @@ def merge_batches(batches: list[dict]) -> tuple[dict, list[tuple[str, str, str]]
                 coerced = _coerce(value, key)
                 if coerced is None:
                     dropped["bad_property"] += 1
+                elif key in entity["props"] and entity["props"][key] != coerced and not isinstance(coerced, str):
+                    conflicts.append(f"{entity_id}.{key}: kept {entity['props'][key]!r} but also saw {coerced!r}")
                 else:
-                    entity["props"].setdefault(key, coerced)  # first value wins so later batches can't drift it
+                    entity["props"].setdefault(key, coerced)  # first value wins for text; differing numbers are reported as conflicts
 
     _apply_caps(entities, dropped)
 
@@ -79,7 +82,10 @@ def merge_batches(batches: list[dict]) -> tuple[dict, list[tuple[str, str, str]]
                 continue
             relations.add((s, p, o))
 
-    return entities, sorted(relations), dict(dropped)
+    result = dict(dropped)
+    if conflicts:
+        result["conflicts"] = conflicts
+    return entities, sorted(relations), result
 
 
 def _infer_per_year(label: str) -> int | None:

@@ -15,6 +15,9 @@ CLASSES: dict[str, tuple[str | None, str]] = {
     "Benefit": (None, "Amount the plan pays out, e.g. the death benefit"),
 }
 
+# Props whose value differs per entity, so their supporting quote must name that entity (e.g. the mode) to count as evidence.
+PER_ENTITY_QUOTE_PROPS = {"graceDays"}
+
 # Created in code from numbers the LLM extracts on other entities (see facts.link_structure); the LLM is not asked for these.
 DERIVED_CLASSES = {"GracePeriod", "LockInPeriod"}
 

@@ -5,7 +5,7 @@ import copy
 import json
 import logging
 import re
-from difflib import SequenceMatcher
+from collections import Counter
 
 from ontology_graph import config, hooks, llm, prompts
 from ontology_graph.clients import graphdb, minio_store
@@ -17,7 +17,8 @@ logger = logging.getLogger(__name__)
 
 _BATCH_CHARS = 7000
 _MIN_QUOTE_WORDS = 3
-_MIN_CONTIGUOUS_SHARE = 0.7  # share of the quote's words that must match the passages as one unbroken run
+_MIN_COVERAGE = 0.85  # share of the quote's distinct words that must sit together in one window of the passages
+_WINDOW_SLACK = 2.0  # the window may be this many times longer than the quote, so a rewritten or per-mode quote still fits
 
 
 def _batches(texts: list[str]) -> list[list[str]]:
@@ -40,21 +41,50 @@ def _words(text: str) -> list[str]:
     return _WORDS.findall(str(text).lower())
 
 
-def _check(value, quote, haystack: list[str]) -> str | None:
+def _coverage(quote_words: list[str], haystack: list[str]) -> float:
+    """Best share of the quote's distinct words found together inside any one window of the passages."""
+    wanted = set(quote_words)
+    size = int(len(quote_words) * _WINDOW_SLACK) + 2
+    counts: Counter = Counter()
+    present, best = 0, 0.0
+    for i, word in enumerate(haystack):
+        if word in wanted:
+            counts[word] += 1
+            present += counts[word] == 1
+        old = i - size
+        if old >= 0 and haystack[old] in wanted:
+            counts[haystack[old]] -= 1
+            present -= counts[haystack[old]] == 0
+        best = max(best, present / len(wanted))
+    return best
+
+
+def _mentions(label: str, quote_words: list[str]) -> bool:
+    """True if the quote names the entity (e.g. the premium mode); 'half yearly' is not mistaken for 'yearly'."""
+    label_words = _words(re.split(r"[(\[]", str(label))[0])
+    if not label_words:
+        return False
+    if len(label_words) > 1:
+        n = len(label_words)
+        return any(quote_words[i:i + n] == label_words for i in range(len(quote_words) - n + 1))
+    return any(word == label_words[0] and (i == 0 or quote_words[i - 1] != "half") for i, word in enumerate(quote_words))
+
+
+def _check(value, quote, haystack: list[str], entity_label: str, key: str) -> str | None:
     """None if the value is supported by its quote in the passages, else the reason it is not."""
     quote_words = _words(quote)
     if len(quote_words) < _MIN_QUOTE_WORDS:
         return "quote too short or missing"
-    matcher = SequenceMatcher(None, quote_words, haystack, autojunk=False)
-    longest = matcher.find_longest_match(0, len(quote_words), 0, len(haystack))
-    if longest.size < _MIN_CONTIGUOUS_SHARE * len(quote_words):
+    if _coverage(quote_words, haystack) < _MIN_COVERAGE:
         return "quote not found in the passages"
     try:
         number = float(re.sub(r"(?i)rs\.?|inr|%|,", "", str(value)))
     except ValueError:
-        return None  # non-numeric text value: the quote being present in the passages is the evidence
-    if number.is_integer() and str(int(number)) not in re.sub(r"[^0-9]", "", str(quote)):
+        number = None  # non-numeric text value: the quote being present in the passages is the evidence
+    if number is not None and number.is_integer() and str(int(number)) not in re.sub(r"[^0-9]", "", str(quote)):
         return "number not in the quote"
+    if key in schema.PER_ENTITY_QUOTE_PROPS and not _mentions(entity_label, quote_words):
+        return "quote does not name the entity"
     return None
 
 
@@ -71,7 +101,7 @@ def _ground(data: dict, passages_text: str) -> list[dict]:
             if not (isinstance(raw, dict) and "value" in raw):
                 rejected.append({"entity": entity.get("id"), "prop": key, "value": raw, "quote": None, "reason": "not a {value, quote} object"})
                 continue
-            reason = _check(raw["value"], raw.get("quote", ""), haystack)
+            reason = _check(raw["value"], raw.get("quote", ""), haystack, str(entity.get("label") or entity.get("id") or ""), key)
             if reason is None:
                 grounded[key] = raw["value"]
             else:
@@ -132,6 +162,8 @@ def run(prev: dict) -> dict:
         logger.warning("Could not save the extraction debug file.", exc_info=True)
     if not entities:
         raise RuntimeError(f"No ontology entities could be extracted for {doc_id}.")
+    if dropped.get("conflicts"):
+        raise RuntimeError(f"Conflicting supported values for the same field: {dropped['conflicts']}")
     facts.apply_mode_codes(entities)
     relations = facts.link_structure(entities, relations)
     facts.validate_compact(entities, relations)
