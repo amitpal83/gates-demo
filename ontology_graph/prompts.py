@@ -7,12 +7,14 @@ _EXTRACTION_SYSTEM = """You extract a very small knowledge graph from a life-ins
 
 __SCHEMA__
 
-Return a JSON object: {"entities": [{"id": "snake_case_id", "class": "<Class>", "label": "<name as written>", "props": {"<dataProperty>": <value>}}], "relations": [{"s": "<entity id>", "p": "<relation>", "o": "<entity id>"}]}
+Return a JSON object: {"entities": [{"id": "snake_case_id", "class": "<Class>", "label": "<name as written>", "props": {"<dataProperty>": {"value": <value>, "quote": "<the exact words from the passages that state it>"}}}], "relations": [{"s": "<entity id>", "p": "<relation>", "o": "<entity id>"}]}
+
+EVIDENCE RULE: every prop (except "description") must be an object with "value" and a "quote" copied word for word from the passages (at least a short sentence or table row, the numbers included). A prop whose quote is not found in the passages is discarded, so omit any prop you cannot quote. Never fill a value for a prop from a passage that does not state it.
 
 What to extract:
 - one Insurer (id "lic" for Life Insurance Corporation of India).
 - one Plan: its name, uin, planNumber, the allowed premium paying terms and policy terms (as text lists such as "5, 7, 10, 15"), and lockInYears (the years before partial withdrawal or surrender is allowed).
-- one PremiumMode for EACH way the brochure says premium can be paid (for example yearly, half-yearly, quarterly, monthly): installmentsPerYear, intervalMonths, graceDays (the grace period for that mode, in days), and the minimum installment in rupees (minInstallmentInr for premium paying terms of 5, 7 and 10 years; minInstallmentInrPpt15 for 15 years). Put anything special about the mode, such as "NACH only", in "description".
+- one PremiumMode for EACH way the brochure says premium can be paid (for example yearly, half-yearly, quarterly, monthly): graceDays (the grace period that applies to that mode, in days, only from a passage that states it) and the minimum installment in rupees (minInstallmentInr for premium paying terms of 5, 7 and 10 years; minInstallmentInrPpt15 for 15 years). Label the mode with its plain name (Yearly, Half-Yearly, Quarterly, Monthly). Put anything special about the mode, such as "NACH only", in "description".
 - one Benefit: the Death Benefit, with payoutMode (how it can be paid), minPctOfPremiumsPaid (the percentage-of-premiums-paid floor) and a one-line description of the amounts it is the highest of.
 - ids are lowercase snake_case: the plan from its name, modes as "yearly", "half_yearly", "quarterly", "monthly", the benefit as "death_benefit".
 

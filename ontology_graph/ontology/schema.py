@@ -107,7 +107,7 @@ def prompt_description() -> str:
             out.append(f"- {name}: {domain or 'Any'} -> {rng or 'Any'}: {comment}")
     out.append("\nDATA PROPERTIES (name (type): meaning)")
     for name, (xsd, comment) in DATA_PROPERTIES.items():
-        if name not in {"days", "durationYears"}:
+        if name not in {"days", "durationYears", "modeCode", "installmentsPerYear", "intervalMonths"}:  # built or inferred in code
             out.append(f"- {name} ({xsd}): {comment}")
     return "\n".join(out)
 
