@@ -1,36 +1,56 @@
 import { useEffect, useState } from "react";
 import { api } from "./api";
-import { rupees } from "./format";
-import type { CompareResponse, OntologyGraph as Graph, Policy } from "./types";
+import type { AgentKey, AskResponse, CompareResponse, OntologyGraph as Graph, Policy } from "./types";
 import AgentPanel from "./components/AgentPanel";
 import Charts from "./components/Charts";
-import OntologyGraph from "./components/OntologyGraph";
+import OntologyModal from "./components/OntologyModal";
+
+type Mode = AgentKey | "compare";
+
+const AGENTS: Record<AgentKey, { title: string; subtitle: string }> = {
+  ontology: { title: "Agent A · Ontology + PostgreSQL", subtitle: "Policy record and the plan facts from GraphDB" },
+  sql: { title: "Agent B · PostgreSQL only", subtitle: "Policy record and column descriptions only" },
+};
+
+const MODES: { key: Mode; label: string }[] = [
+  { key: "ontology", label: "Ontology + PostgreSQL agent" },
+  { key: "sql", label: "PostgreSQL-only agent" },
+  { key: "compare", label: "Compare both" },
+];
+
+type View = { kind: "single"; data: AskResponse } | { kind: "compare"; data: CompareResponse };
 
 export default function App() {
   const [policies, setPolicies] = useState<Policy[]>([]);
   const [questions, setQuestions] = useState<string[]>([]);
   const [graph, setGraph] = useState<Graph | null>(null);
-  const [selected, setSelected] = useState<string>("");
+  const [selected, setSelected] = useState("");
   const [question, setQuestion] = useState("");
-  const [result, setResult] = useState<CompareResponse | null>(null);
+  const [mode, setMode] = useState<Mode>("ontology");
+  const [view, setView] = useState<View | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [graphError, setGraphError] = useState<string | null>(null);
+  const [ontologyOpen, setOntologyOpen] = useState(false);
 
   useEffect(() => {
     api.policies().then((p) => { setPolicies(p); if (p.length) setSelected(p[0].policy_number); }).catch((e: Error) => setError(e.message));
     api.questions().then((q) => { setQuestions(q); if (q.length) setQuestion(q[0]); }).catch((e: Error) => setError(e.message));
-    api.ontology().then(setGraph).catch((e: Error) => { setGraphError(e.message); setGraph({ nodes: [], edges: [] }); });
   }, []);
 
-  const policy = policies.find((p) => p.policy_number === selected);
+  function openOntology() {
+    setOntologyOpen(true);
+    if (!graph) api.ontology().then(setGraph).catch((e: Error) => { setError(e.message); setGraph({ nodes: [], edges: [] }); });
+  }
+
+  const askLabel = mode === "compare" ? "Ask both and compare" : `Ask the ${MODES.find((m) => m.key === mode)!.label}`;
 
   async function ask() {
     if (!selected || !question.trim()) return;
     setBusy(true);
     setError(null);
     try {
-      setResult(await api.compare(selected, question.trim()));
+      if (mode === "compare") setView({ kind: "compare", data: await api.compare(selected, question.trim()) });
+      else setView({ kind: "single", data: await api.ask(selected, question.trim(), mode) });
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -42,35 +62,32 @@ export default function App() {
     <main>
       <header className="top">
         <h1>Ontology layer vs SQL layer</h1>
-        <p className="muted">
-          LIC’s Protection Plus. The same question goes to two agents with the same model and the same customer record. Only one of them also gets the plan ontology.
-        </p>
+        <button className="secondary" onClick={openOntology}>Open ontology</button>
       </header>
 
       <section className="panel">
-        <h2>1. Customer policies as the database stores them</h2>
-        <p className="muted">The database keeps only a code in <code>mode_code</code>. What the code means is not stored in SQL.</p>
-        <div className="policies" role="radiogroup" aria-label="Choose a policy">
-          {policies.map((p) => (
-            <button key={p.policy_number} role="radio" aria-checked={p.policy_number === selected} className={`policy${p.policy_number === selected ? " is-selected" : ""}`} onClick={() => { setSelected(p.policy_number); setResult(null); }}>
-              <span className="policy-id">{p.policy_number}</span>
-              <span className="policy-name">{p.full_name}</span>
-              <span className="policy-meta">{rupees(p.installment_premium)} per installment · paying term {p.premium_paying_term_years} yrs</span>
-              <span className="mode-pill">mode_code = {p.mode_code}</span>
-            </button>
-          ))}
+        <div className="controls">
+          <label className="field">
+            <span>Policy</span>
+            <select value={selected} onChange={(e) => { setSelected(e.target.value); setView(null); }}>
+              {policies.map((p) => (
+                <option key={p.policy_number} value={p.policy_number}>{p.policy_number} · {p.full_name}</option>
+              ))}
+            </select>
+          </label>
+
+          <div className="field">
+            <span id="agent-label">Ask</span>
+            <div className="seg" role="radiogroup" aria-labelledby="agent-label">
+              {MODES.map((m) => (
+                <button key={m.key} role="radio" aria-checked={m.key === mode} className={m.key === mode ? "is-active" : ""} onClick={() => { setMode(m.key); setView(null); setError(null); }}>
+                  {m.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
-      </section>
 
-      <section className="panel">
-        <h2>2. The plan ontology built from the brochure</h2>
-        <p className="muted">Extracted from the plan PDF by the pipeline and stored in GraphDB. The highlighted mode is the one this policy’s code points to.</p>
-        {graphError && <p className="error">{graphError}</p>}
-        <OntologyGraph graph={graph} policy={policy} />
-      </section>
-
-      <section className="panel">
-        <h2>3. Ask both agents the same question</h2>
         <div className="chips">
           {questions.map((q) => (
             <button key={q} className={`chip-btn${q === question ? " is-active" : ""}`} onClick={() => setQuestion(q)}>{q}</button>
@@ -78,26 +95,29 @@ export default function App() {
         </div>
         <div className="ask">
           <input value={question} onChange={(e) => setQuestion(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") ask(); }} placeholder="Ask about this policy’s premiums" maxLength={500} aria-label="Question" />
-          <button className="primary" onClick={ask} disabled={busy || !selected || !question.trim()}>{busy ? "Asking both agents…" : "Ask both agents"}</button>
+          <button className="primary" onClick={ask} disabled={busy || !selected || !question.trim()}>{busy ? "Asking…" : askLabel}</button>
         </div>
         {error && <p className="error" role="alert">{error}</p>}
       </section>
 
-      {result && (
+      {view?.kind === "single" && (
+        <AgentPanel title={AGENTS[view.data.agent].title} subtitle={AGENTS[view.data.agent].subtitle} tone={view.data.agent} result={view.data.result} />
+      )}
+
+      {view?.kind === "compare" && (
         <>
           <section className="panel">
-            <h2>Results for {result.policy_number}</h2>
-            <p className="muted">
-              Correct answer: {String(result.truth.mode_label)} premium, {String(result.truth.payments_per_year)} payment(s) a year, next due {String(result.truth.next_due_date)}.
-            </p>
-            <Charts result={result} />
+            <h2>Comparison for {view.data.policy_number}</h2>
+            <Charts result={view.data} />
           </section>
           <div className="agents">
-            <AgentPanel title="Agent A · Ontology + PostgreSQL" subtitle="Policy record and the plan facts from GraphDB" tone="ontology" result={result.ontology_agent} />
-            <AgentPanel title="Agent B · PostgreSQL only" subtitle="Policy record and column descriptions only" tone="sql" result={result.sql_agent} />
+            <AgentPanel title={AGENTS.ontology.title} subtitle={AGENTS.ontology.subtitle} tone="ontology" result={view.data.ontology_agent} />
+            <AgentPanel title={AGENTS.sql.title} subtitle={AGENTS.sql.subtitle} tone="sql" result={view.data.sql_agent} />
           </div>
         </>
       )}
+
+      <OntologyModal open={ontologyOpen} onClose={() => setOntologyOpen(false)} graph={graph} />
     </main>
   );
 }

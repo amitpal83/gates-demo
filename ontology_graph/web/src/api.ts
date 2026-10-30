@@ -1,4 +1,4 @@
-import type { CompareResponse, OntologyGraph, Policy } from "./types";
+import type { AgentKey, AskResponse, CompareResponse, OntologyGraph, Policy } from "./types";
 
 async function failure(response: Response): Promise<Error> {
   try {
@@ -19,6 +19,15 @@ export const api = {
   policies: () => get<Policy[]>("/api/policies"),
   questions: () => get<string[]>("/api/questions"),
   ontology: () => get<OntologyGraph>("/api/ontology"),
+  async ask(policy_number: string, question: string, agent: AgentKey): Promise<AskResponse> {
+    const response = await fetch("/api/ask", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ policy_number, question, agent }),
+    });
+    if (!response.ok) throw await failure(response);
+    return response.json() as Promise<AskResponse>;
+  },
   async compare(policy_number: string, question: string): Promise<CompareResponse> {
     const response = await fetch("/api/compare", {
       method: "POST",

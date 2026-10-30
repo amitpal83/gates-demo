@@ -50,6 +50,16 @@ export interface AgentResult {
   summary: Record<Verdict, number>;
 }
 
+export type AgentKey = "ontology" | "sql";
+
+export interface AskResponse {
+  policy_number: string;
+  question: string;
+  truth: Record<string, string | number>;
+  agent: AgentKey;
+  result: AgentResult;
+}
+
 export interface CompareResponse {
   policy_number: string;
   question: string;
