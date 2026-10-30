@@ -13,9 +13,9 @@ EVIDENCE RULE: every prop (except "description") must be an object with "value" 
 
 What to extract:
 - one Insurer (id "lic" for Life Insurance Corporation of India).
-- one Plan: its name, uin, planNumber, the allowed premium paying terms and policy terms (as text lists such as "5, 7, 10, 15"), and lockInYears (the years before partial withdrawal or surrender is allowed).
-- one PremiumMode for EACH way the brochure says premium can be paid (for example yearly, half-yearly, quarterly, monthly): graceDays (the grace period that applies to that mode, in days, only from a passage that states it) and the minimum installment in rupees (minInstallmentInr for premium paying terms of 5, 7 and 10 years; minInstallmentInrPpt15 for 15 years). Label the mode with its plain name (Yearly, Half-Yearly, Quarterly, Monthly). Put anything special about the mode, such as "NACH only", in "description".
-- one Benefit: the Death Benefit, with payoutMode (how it can be paid), minPctOfPremiumsPaid (the percentage-of-premiums-paid floor) and a one-line description of the amounts it is the highest of.
+- one Plan: its name, uin (the plan's own UIN, written like 512L361V01; never a fund's identification number or SFIN), planNumber, the allowed premium paying terms and policy terms (as text lists such as "5, 7, 10, 15"), and lockInYears (the years before partial withdrawal or surrender is allowed).
+- one PremiumMode for EACH way the brochure says premium can be paid (for example yearly, half-yearly, quarterly, monthly): graceDays (the grace period that applies to that mode, in days, only from a passage that states it). Label the mode with its plain name (Yearly, Half-Yearly, Quarterly, Monthly). Put anything special about the mode, such as "NACH only", in "description".
+- one Benefit: the Death Benefit, with payoutMode (how it can be paid), and minPctOfPremiumsPaid (the percentage-of-premiums-paid floor). Do not write a description for the Benefit.
 - ids are lowercase snake_case: the plan from its name, modes as "yearly", "half_yearly", "quarterly", "monthly", the benefit as "death_benefit".
 
 Rules:

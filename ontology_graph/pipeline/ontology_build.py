@@ -85,6 +85,9 @@ def _check(value, quote, haystack: list[str], entity_label: str, key: str) -> st
         return "number not in the quote"
     if key in schema.PER_ENTITY_QUOTE_PROPS and not _mentions(entity_label, quote_words):
         return "quote does not name the entity"
+    pattern = schema.PROP_FORMATS.get(key)
+    if pattern and not re.fullmatch(pattern, str(value).strip()):
+        return "value has the wrong format"
     return None
 
 

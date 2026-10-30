@@ -1,10 +1,11 @@
-"""FastAPI backend for the demo front end: policies, the plan ontology as nodes/edges, and /api/compare which asks the same question of the ontology-backed agent and the SQL-only agent and scores both against ground truth. Also serves the built React app from ./static when present."""
+"""FastAPI backend for the demo front end: policies, the plan ontology as nodes/edges, /api/ask which asks one agent, and /api/compare which asks both agents the same question and scores them against ground truth. Also serves the built React app from ./static when present."""
 from __future__ import annotations
 
 import logging
 import re
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from typing import Literal
 
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
@@ -30,6 +31,10 @@ PRESET_QUESTIONS = [
 class CompareRequest(BaseModel):
     policy_number: str = Field(..., min_length=3, max_length=24)
     question: str = Field(..., min_length=3, max_length=500)
+
+
+class AskRequest(CompareRequest):
+    agent: Literal["ontology", "sql"]
 
 
 @app.get("/api/health")
@@ -86,8 +91,8 @@ def ontology() -> dict:
     return {"nodes": list(nodes.values()), "edges": edges}
 
 
-@app.post("/api/compare")
-def compare(request: CompareRequest) -> dict:
+def _prepare(request: CompareRequest) -> tuple[dict, dict, dict]:
+    """Validates the request and loads the policy; returns (record, column notes, ground truth)."""
     if not _POLICY_RE.match(request.policy_number):
         raise HTTPException(status_code=422, detail="Invalid policy number.")
     verdict = hooks.check_question(request.question)
@@ -100,8 +105,30 @@ def compare(request: CompareRequest) -> dict:
     except Exception as error:
         logger.exception("Could not load the policy")
         raise HTTPException(status_code=502, detail=f"Could not read the policy database: {error}")
+    return record, notes, truth.ground_truth(record)
 
-    expected = truth.ground_truth(record)
+
+def _scored(result: dict, expected: dict) -> dict:
+    checks = truth.check_answer(expected, result["answer"])
+    return {**result, "checks": checks, "summary": truth.summarize(checks)}
+
+
+@app.post("/api/ask")
+def ask(request: AskRequest) -> dict:
+    """Asks one agent: 'ontology' (PostgreSQL + plan ontology) or 'sql' (PostgreSQL only)."""
+    record, notes, expected = _prepare(request)
+    runner = agent.run_ontology_agent if request.agent == "ontology" else agent.run_sql_only_agent
+    try:
+        result = runner(record, notes, request.question)
+    except Exception as error:
+        logger.exception("The agent failed")
+        raise HTTPException(status_code=502, detail=f"The agent failed: {error}")
+    return {"policy_number": request.policy_number, "question": request.question, "truth": expected, "agent": request.agent, "result": _scored(result, expected)}
+
+
+@app.post("/api/compare")
+def compare(request: CompareRequest) -> dict:
+    record, notes, expected = _prepare(request)
     with ThreadPoolExecutor(max_workers=2) as pool:
         future_a = pool.submit(agent.run_ontology_agent, record, notes, request.question)
         future_b = pool.submit(agent.run_sql_only_agent, record, notes, request.question)
@@ -110,12 +137,13 @@ def compare(request: CompareRequest) -> dict:
         except Exception as error:
             logger.exception("An agent failed")
             raise HTTPException(status_code=502, detail=f"An agent failed: {error}")
-
-    response = {"policy_number": request.policy_number, "question": request.question, "truth": expected}
-    for key, result in (("ontology_agent", result_a), ("sql_agent", result_b)):
-        checks = truth.check_answer(expected, result["answer"])
-        response[key] = {**result, "checks": checks, "summary": truth.summarize(checks)}
-    return response
+    return {
+        "policy_number": request.policy_number,
+        "question": request.question,
+        "truth": expected,
+        "ontology_agent": _scored(result_a, expected),
+        "sql_agent": _scored(result_b, expected),
+    }
 
 
 _STATIC = Path(__file__).resolve().parent.parent / "static"

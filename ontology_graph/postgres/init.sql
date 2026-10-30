@@ -55,7 +55,7 @@ INSERT INTO customers (customer_id, full_name, date_of_birth, city) VALUES
 -- All four: annualized premium 60,000, premium paying term 10, policy term 20, started 1 Apr 2024, so the truth is 6,00,000 over the paying term.
 INSERT INTO customer_policy
     (policy_number, customer_id, plan_uin, plan_name, installment_premium, mode_code, premium_paying_term_years, policy_term_years, basic_sum_assured, start_date, last_paid_date, status) VALUES
-    ('DEMO-0001', 'CUST-001', '512L361V01', 'LIC''s Protection Plus', 60000.00,  1, 10, 20,  600000.00, '2024-04-01', '2026-04-01', 'In force'),
-    ('DEMO-0002', 'CUST-002', '512L361V01', 'LIC''s Protection Plus', 30000.00,  6, 10, 20,  600000.00, '2024-04-01', '2026-10-01', 'In force'),
-    ('DEMO-0003', 'CUST-003', '512L361V01', 'LIC''s Protection Plus', 15000.00,  3, 10, 20,  900000.00, '2024-04-01', '2026-10-01', 'In force'),
-    ('DEMO-0004', 'CUST-004', '512L361V01', 'LIC''s Protection Plus',  5000.00, 12, 10, 20,  600000.00, '2024-04-01', '2026-10-01', 'In force');
+    ('P012-0001', 'CUST-001', '512L361V01', 'LIC''s Protection Plus', 60000.00,  1, 10, 20,  600000.00, '2024-04-01', '2026-04-01', 'In force'),
+    ('P012-0002', 'CUST-002', '512L361V01', 'LIC''s Protection Plus', 30000.00,  6, 10, 20,  600000.00, '2024-04-01', '2026-10-01', 'In force'),
+    ('P012-0003', 'CUST-003', '512L361V01', 'LIC''s Protection Plus', 15000.00,  3, 10, 20,  900000.00, '2024-04-01', '2026-10-01', 'In force'),
+    ('P012-0004', 'CUST-004', '512L361V01', 'LIC''s Protection Plus',  5000.00, 12, 10, 20,  600000.00, '2024-04-01', '2026-10-01', 'In force');

@@ -18,6 +18,9 @@ CLASSES: dict[str, tuple[str | None, str]] = {
 # Props whose value differs per entity, so their supporting quote must name that entity (e.g. the mode) to count as evidence.
 PER_ENTITY_QUOTE_PROPS = {"graceDays"}
 
+# Format a value must match to be accepted (IRDAI UIN: 3 digits, a letter, 3 digits, V, 2 digits, e.g. 512L361V01), so a fund's identification number is never taken for the plan's UIN.
+PROP_FORMATS = {"uin": r"\d{3}[A-Z]\d{3}V\d{2}"}
+
 # Created in code from numbers the LLM extracts on other entities (see facts.link_structure); the LLM is not asked for these.
 DERIVED_CLASSES = {"GracePeriod", "LockInPeriod"}
 
@@ -45,8 +48,6 @@ DATA_PROPERTIES: dict[str, tuple[str, str]] = {
     "installmentsPerYear": ("integer", "Number of premium installments paid in one policy year under this mode"),
     "intervalMonths": ("integer", "Months between two installments under this mode"),
     "graceDays": ("integer", "Extraction input on a mode; becomes a GracePeriod node"),
-    "minInstallmentInr": ("decimal", "Minimum installment in rupees for premium paying terms of 5, 7 and 10 years"),
-    "minInstallmentInrPpt15": ("decimal", "Minimum installment in rupees for a premium paying term of 15 years"),
     "days": ("integer", "Length of a grace period in days"),
     "durationYears": ("decimal", "Length of a lock-in period in years"),
     "payoutMode": ("string", "How a benefit is paid, e.g. lump sum or in instalments"),
